@@ -185,7 +185,7 @@ function somarCampo(arr, campo) {
 
 function renderGeral(dados) {
   destruirCharts();
-  const lotes = getLotes(dados);
+  const lotesGeral = getLotes(dados);
   const total = somarCampo(dados,'benef');
   const mul = somarCampo(dados,'mulheres');
   const jov = somarCampo(dados,'jovens');
@@ -193,7 +193,7 @@ function renderGeral(dados) {
   const valor = somarCampo(dados,'valor');
 
   // por lote
-  const loteDados = lotes.map(l => {
+  const loteDados = lotesGeral.map(l => {
     const d = dados.filter(x => x.lote === l);
     return { lote:l, benef:somarCampo(d,'benef'), mul:somarCampo(d,'mulheres'), jov:somarCampo(d,'jovens'), quil:somarCampo(d,'quil') };
   });
@@ -202,7 +202,7 @@ function renderGeral(dados) {
 
   document.getElementById('panel-geral').innerHTML = `
     <div class="kpi-row">
-      <div class="kpi"><div class="kpi-label">Total beneficiários</div><div class="kpi-value">${total.toLocaleString('pt-BR')}</div><div class="kpi-sub">${lotes.length} lotes</div></div>
+      <div class="kpi"><div class="kpi-label">Total beneficiários</div><div class="kpi-value">${total.toLocaleString('pt-BR')}</div><div class="kpi-sub">${lotesGeral.length} lotesGeral</div></div>
       <div class="kpi"><div class="kpi-label">Mulheres</div><div class="kpi-value" style="color:#2a78d6;">${mul.toLocaleString('pt-BR')}</div><div class="kpi-sub">${pct(mul,total)} do total</div></div>
       <div class="kpi"><div class="kpi-label">Jovens</div><div class="kpi-value" style="color:#1baf7a;">${jov.toLocaleString('pt-BR')}</div><div class="kpi-sub">${pct(jov,total)} do total</div></div>
       <div class="kpi"><div class="kpi-label">Quilombolas/PCT</div><div class="kpi-value" style="color:#eda100;">${quil.toLocaleString('pt-BR')}</div><div class="kpi-sub">${pct(quil,total)} do total</div></div>
@@ -239,12 +239,12 @@ function renderGeral(dados) {
     <div class="card">
       <p class="sec">Beneficiários por lote</p>
       <div style="position:relative;height:220px;">
-        <canvas id="chart-lotes" role="img" aria-label="Beneficiários por lote">${loteDados.map(l=>l.lote+': '+l.benef).join(', ')}</canvas>
+        <canvas id="chart-lotesGeral" role="img" aria-label="Beneficiários por lote">${loteDados.map(l=>l.lote+': '+l.benef).join(', ')}</canvas>
       </div>
     </div>
   `;
 
-  charts.lotes = new Chart(document.getElementById('chart-lotes'), {
+  charts.lotesGeral = new Chart(document.getElementById('chart-lotesGeral'), {
     type: 'bar',
     data: {
       labels: loteDados.map(l => l.lote),
@@ -266,7 +266,7 @@ function renderGeral(dados) {
 }
 
 function renderMuni(dados) {
-  const lotes = getLotes(dados);
+  const lotesMuni = getLotes(dados);
   const muniMap = {};
   filtrar(dados).forEach(d => {
     if (!muniMap[d.municipio]) muniMap[d.municipio] = {lote:d.lote, benef:0, mulheres:0, jovens:0, quil:0, atividades:[]};
@@ -280,8 +280,8 @@ function renderMuni(dados) {
   const btns = `<div class="lote-select-wrap">
     <label>Filtrar por lote:</label>
     <select id="lote-select" onchange="setLoteSelect(this.value)">
-      <option value="todos" ${loteAtivo==='todos'?'selected':''}>Todos os lotes</option>
-      ${lotes.map(l => `<option value="${l}" ${loteAtivo===l?'selected':''}>${l}</option>`).join('')}
+      <option value="todos" ${loteAtivo==='todos'?'selected':''}>Todos os lotesMuni</option>
+      ${lotesMuni.map(l => `<option value="${l}" ${loteAtivo===l?'selected':''}>${l}</option>`).join('')}
     </select>
   </div>`;
 
