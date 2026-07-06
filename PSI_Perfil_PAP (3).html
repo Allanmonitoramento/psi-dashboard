@@ -311,7 +311,7 @@ function setLote(l, el) {
 }
 
 function renderAtiv(dados) {
-  const lotes = getLotes(dados);
+  const lotesAtiv = getLotes(dados);
   const selectHtml = `<div class="lote-select-wrap" style="margin-bottom:1rem;">
     <label>Filtrar por lote:</label>
     <select onchange="loteAtivo=this.value;renderAtiv(dadosPAP);">
@@ -363,7 +363,7 @@ function renderAtiv(dados) {
 }
 
 function renderPerfil(dados) {
-  const lotes = getLotes(dados);
+  const lotesPerfil = getLotes(dados);
   const selectHtmlP = `<div class="lote-select-wrap" style="margin-bottom:1rem;">
     <label>Filtrar por lote:</label>
     <select onchange="loteAtivo=this.value;renderPerfil(dadosPAP);">
@@ -380,10 +380,10 @@ function renderPerfil(dados) {
     muniMap[d.municipio].quil += d.quil;
   });
 
-  const lotes = getLotes(dados);
+  const lotesCores = getLotes(dados);
   const cores = ['#2a78d6','#1baf7a','#eda100','#e34948'];
   const loteCorMap = {};
-  lotes.forEach((l,i) => loteCorMap[l] = cores[i]||'#888780');
+  lotesCores.forEach((l,i) => loteCorMap[l] = cores[i]||'#888780');
 
   const munis = Object.entries(muniMap).sort((a,b) => b[1].benef-a[1].benef);
   const labels = munis.map(m => m[0]);
