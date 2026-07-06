@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSI — Perfil dos Beneficiários PAP</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;background:#f5f5f3;color:#1a1a18;padding:16px;}
+.dash{max-width:980px;margin:0 auto;}
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px;background:#fff;border-radius:12px;padding:1rem 1.25rem;border:1px solid #e1e0d9;}
+.header h1{font-size:17px;font-weight:700;color:#1a1a18;}
+.header p{font-size:12px;color:#888780;margin-top:2px;}
+.badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;background:#e6f1fb;color:#185fa5;white-space:nowrap;}
+.btn{font-size:12px;padding:6px 14px;border:1px solid #c3c2b7;border-radius:6px;background:#fff;cursor:pointer;font-family:Arial,sans-serif;color:#444;}
+.btn:hover{background:#f5f5f3;}
+.sync-row{font-size:12px;color:#888780;margin-bottom:1rem;}
+.tabs{display:flex;gap:2px;margin-bottom:1.25rem;border-bottom:1px solid #e1e0d9;flex-wrap:wrap;}
+.tab{padding:8px 14px;font-size:13px;cursor:pointer;color:#888780;border:none;border-bottom:2px solid transparent;background:none;font-family:Arial,sans-serif;}
+.tab.active{color:#1a1a18;border-bottom-color:#1a1a18;font-weight:700;}
+.panel{display:none;}.panel.active{display:block;}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:1.25rem;}
+.kpi{background:#fff;border-radius:8px;padding:.875rem 1rem;border:1px solid #e1e0d9;}
+.kpi-label{font-size:11px;color:#888780;margin-bottom:5px;}
+.kpi-value{font-size:20px;font-weight:700;color:#1a1a18;line-height:1.1;}
+.kpi-sub{font-size:11px;color:#52514e;margin-top:3px;}
+.card{background:#fff;border-radius:12px;padding:1rem 1.25rem;border:1px solid #e1e0d9;margin-bottom:1.25rem;}
+.sec{font-size:11px;font-weight:700;color:#888780;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;}
+.bar-row{margin-bottom:9px;}
+.bar-hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;font-size:12px;}
+.bar-name{color:#1a1a18;}
+.bar-val{color:#888780;font-size:11px;}
+.bar-track{width:100%;height:7px;background:#f1efe8;border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;}
+.pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-right:4px;margin-top:4px;}
+.pill-g{background:#eaf3de;color:#3b6d11;}
+.pill-a{background:#faeeda;color:#854f0b;}
+.pill-b{background:#e6f1fb;color:#185fa5;}
+.lote-select-wrap{display:flex;align-items:center;gap:10px;margin-bottom:1rem;}
+.lote-select-wrap label{font-size:12px;color:#888780;white-space:nowrap;}
+.lote-select-wrap select{font-size:13px;padding:6px 10px;border:1px solid #c3c2b7;border-radius:6px;background:#fff;color:#1a1a18;font-family:Arial,sans-serif;cursor:pointer;}
+.muni-card{background:#f9f9f7;border:1px solid #e1e0d9;border-radius:8px;padding:.75rem 1rem;margin-bottom:8px;}
+.muni-title{font-size:13px;font-weight:700;color:#1a1a18;margin-bottom:4px;}
+.muni-ativ{font-size:11px;color:#888780;margin-bottom:8px;}
+.muni-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.muni-stat{text-align:center;}
+.muni-num{font-size:14px;font-weight:700;color:#1a1a18;}
+.muni-lbl{font-size:10px;color:#888780;}
+.loading{text-align:center;padding:2rem;color:#888780;font-size:13px;}
+.err{text-align:center;padding:1.5rem;color:#a32d2d;font-size:13px;background:#fcebeb;border-radius:8px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="dash">
+  <div class="header">
+    <div>
+      <h1>PSI — Perfil dos Beneficiários PAP</h1>
+      <p>Projetos de Adaptação Produtiva · BR-L1542 · BID/FIDA</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <span class="badge">C02 — Agricultura</span>
+      <button class="btn" onclick="carregarDados()">↻ Atualizar</button>
+    </div>
+  </div>
+
+  <div class="sync-row" id="sync-label">⏳ Carregando dados...</div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="aba('geral',this)">📊 Visão geral</button>
+    <button class="tab" onclick="aba('muni',this)">📍 Por município</button>
+    <button class="tab" onclick="aba('ativ',this)">🌱 Por atividade</button>
+    <button class="tab" onclick="aba('perfil',this)">👥 Perfil</button>
+  </div>
+
+  <div id="panel-geral" class="panel active"><div class="loading">Carregando...</div></div>
+  <div id="panel-muni" class="panel"><div class="loading">Carregando...</div></div>
+  <div id="panel-ativ" class="panel"><div class="loading">Carregando...</div></div>
+  <div id="panel-perfil" class="panel"><div class="loading">Carregando...</div></div>
+</div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbyYv7Lcjlq6i9tqKgvBfJp5p9SmBYjEN0v4gI4j-P_vUeHOYdWHR2MvyU0biOZPM5a5rQ/exec';
+
+function aba(id, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  el.classList.add('active');
+}
+
+function pct(a,b){ return b>0 ? (a/b*100).toFixed(1)+'%' : '0%'; }
+function n(v){ return parseFloat(String(v||0).replace(',','.').replace(/[^\d.\-]/g,''))||0; }
+
+let dadosPAP = [];
+let loteAtivo = 'todos';
+let charts = {};
+
+function destruirCharts() {
+  Object.values(charts).forEach(c => { try{ c.destroy(); }catch(e){} });
+  charts = {};
+}
+
+function parsePAP(rows) {
+  const dados = [];
+  let loteAtual = '';
+  let muniAtual = '';
+
+  rows.forEach(r => {
+    const col0 = String(r[0]||'').trim();
+    const col1 = String(r[1]||'').trim();
+    const col2 = String(r[2]||'').trim();
+    const benef = n(r[3]);
+
+    // ignora cabeçalhos e linhas de título
+    if (col1 === 'Município' || col2 === 'Atividade' || col0 === 'LOTE') return;
+    if (col1.toUpperCase().includes('PERFIL')) return;
+    if (col1.toUpperCase().startsWith('TOTAL')) return;
+
+    // detecta lote: col0 é número ou texto "Lote X"
+    if (col0 !== '' && col0 !== 'undefined') {
+      const numLote = parseFloat(col0);
+      if (!isNaN(numLote) && col1 !== '' && col2 === '') {
+        // col0=número do lote, col1=município, sem atividade — linha de subtotal de município
+        loteAtual = 'Lote ' + numLote;
+        muniAtual = col1;
+        return;
+      }
+      if (!isNaN(numLote) && col1 !== '' && col2 !== '' && benef > 0) {
+        // col0=lote, col1=município, col2=atividade — linha de dado
+        loteAtual = 'Lote ' + numLote;
+        muniAtual = col1;
+        dados.push({
+          lote: loteAtual,
+          municipio: muniAtual,
+          atividade: col2,
+          benef: benef,
+          mulheres: n(r[4]),
+          jovens: n(r[5]),
+          quil: n(r[6]),
+          valor: n(r[8])
+        });
+        return;
+      }
+      if (col0.toUpperCase().startsWith('LOTE')) {
+        loteAtual = col0;
+        return;
+      }
+    }
+
+    // linha sem lote na col0: col1=município (subtotal) ou col2=atividade
+    if (col1 && col2 === '' && benef > 0) {
+      muniAtual = col1;
+      return;
+    }
+    if (col2 && benef > 0) {
+      if (col1) muniAtual = col1;
+      dados.push({
+        lote: loteAtual,
+        municipio: muniAtual,
+        atividade: col2,
+        benef: benef,
+        mulheres: n(r[4]),
+        jovens: n(r[5]),
+        quil: n(r[6]),
+        valor: n(r[8])
+      });
+    }
+  });
+  return dados;
+}
+
+function getLotes(dados) {
+  return [...new Set(dados.map(d => d.lote))].filter(Boolean);
+}
+
+function filtrar(dados) {
+  if (loteAtivo === 'todos') return dados;
+  return dados.filter(d => d.lote === loteAtivo);
+}
+
+function somarCampo(arr, campo) {
+  return arr.reduce((s, d) => s + d[campo], 0);
+}
+
+function renderGeral(dados) {
+  destruirCharts();
+  const lotes = getLotes(dados);
+  const total = somarCampo(dados,'benef');
+  const mul = somarCampo(dados,'mulheres');
+  const jov = somarCampo(dados,'jovens');
+  const quil = somarCampo(dados,'quil');
+  const valor = somarCampo(dados,'valor');
+
+  // por lote
+  const loteDados = lotes.map(l => {
+    const d = dados.filter(x => x.lote === l);
+    return { lote:l, benef:somarCampo(d,'benef'), mul:somarCampo(d,'mulheres'), jov:somarCampo(d,'jovens'), quil:somarCampo(d,'quil') };
+  });
+
+  const cores = ['#2a78d6','#1baf7a','#eda100','#e34948','#4a3aa7'];
+
+  document.getElementById('panel-geral').innerHTML = `
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Total beneficiários</div><div class="kpi-value">${total.toLocaleString('pt-BR')}</div><div class="kpi-sub">${lotes.length} lotes</div></div>
+      <div class="kpi"><div class="kpi-label">Mulheres</div><div class="kpi-value" style="color:#2a78d6;">${mul.toLocaleString('pt-BR')}</div><div class="kpi-sub">${pct(mul,total)} do total</div></div>
+      <div class="kpi"><div class="kpi-label">Jovens</div><div class="kpi-value" style="color:#1baf7a;">${jov.toLocaleString('pt-BR')}</div><div class="kpi-sub">${pct(jov,total)} do total</div></div>
+      <div class="kpi"><div class="kpi-label">Quilombolas/PCT</div><div class="kpi-value" style="color:#eda100;">${quil.toLocaleString('pt-BR')}</div><div class="kpi-sub">${pct(quil,total)} do total</div></div>
+      <div class="kpi"><div class="kpi-label">Valor estimado</div><div class="kpi-value">R$ ${(valor/1000000).toFixed(1)} mi</div><div class="kpi-sub">R$ 8.250/família</div></div>
+      <div class="kpi"><div class="kpi-label">Meta final PSI</div><div class="kpi-value" style="color:${total>=9230?'#3b6d11':'#185fa5'};">${(total/9230*100).toFixed(1)}%</div><div class="kpi-sub">${total.toLocaleString('pt-BR')} de 9.230 famílias</div></div>
+    </div>
+    <div class="card">
+      <p class="sec">Metas transversais</p>
+      ${[
+        {nome:'Mulheres', v:mul, t:total, meta:50, cor:'#2a78d6'},
+        {nome:'Jovens (15–29)', v:jov, t:total, meta:20, cor:'#1baf7a'},
+        {nome:'Quilombolas/PCT', v:quil, t:total, meta:50, cor:'#eda100'},
+      ].map(m => {
+        const p = (m.v/m.t*100);
+        const ok = p >= m.meta;
+        return `<div class="bar-row">
+          <div class="bar-hd"><span class="bar-name">${m.nome} — ${m.v.toLocaleString('pt-BR')} (${p.toFixed(1)}%)</span><span class="bar-val">Meta PSI: ${m.meta}%</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.min(p,100).toFixed(0)}%;background:${m.cor};"></div></div>
+        </div>`;
+      }).join('')}
+      <div style="margin-top:12px;">
+        ${[
+          {nome:'Mulheres',v:mul,t:total,meta:50},
+          {nome:'Jovens',v:jov,t:total,meta:20},
+          {nome:'Quilombolas',v:quil,t:total,meta:50}
+        ].map(m => {
+          const p = m.v/m.t*100;
+          return p >= m.meta
+            ? `<span class="pill pill-g">✓ ${m.nome} — meta superada</span>`
+            : `<span class="pill pill-a">⚠ ${m.nome} — ${p.toFixed(1)}% de ${m.meta}%</span>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <p class="sec">Beneficiários por lote</p>
+      <div style="position:relative;height:220px;">
+        <canvas id="chart-lotes" role="img" aria-label="Beneficiários por lote">${loteDados.map(l=>l.lote+': '+l.benef).join(', ')}</canvas>
+      </div>
+    </div>
+  `;
+
+  charts.lotes = new Chart(document.getElementById('chart-lotes'), {
+    type: 'bar',
+    data: {
+      labels: loteDados.map(l => l.lote),
+      datasets: [{
+        data: loteDados.map(l => l.benef),
+        backgroundColor: cores.slice(0, loteDados.length),
+        borderRadius: 4, borderSkipped: false
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{display:false}, ticks:{color:'#888780',font:{size:11}}},
+        y:{grid:{color:'#e1e0d9'}, ticks:{color:'#888780',font:{size:10}}}
+      }
+    }
+  });
+}
+
+function renderMuni(dados) {
+  const lotes = getLotes(dados);
+  const muniMap = {};
+  filtrar(dados).forEach(d => {
+    if (!muniMap[d.municipio]) muniMap[d.municipio] = {lote:d.lote, benef:0, mulheres:0, jovens:0, quil:0, atividades:[]};
+    muniMap[d.municipio].benef += d.benef;
+    muniMap[d.municipio].mulheres += d.mulheres;
+    muniMap[d.municipio].jovens += d.jovens;
+    muniMap[d.municipio].quil += d.quil;
+    if (!muniMap[d.municipio].atividades.includes(d.atividade)) muniMap[d.municipio].atividades.push(d.atividade);
+  });
+
+  const btns = `<div class="lote-select-wrap">
+    <label>Filtrar por lote:</label>
+    <select id="lote-select" onchange="setLoteSelect(this.value)">
+      <option value="todos" ${loteAtivo==='todos'?'selected':''}>Todos os lotes</option>
+      ${lotes.map(l => `<option value="${l}" ${loteAtivo===l?'selected':''}>${l}</option>`).join('')}
+    </select>
+  </div>`;
+
+  const cards = Object.entries(muniMap).sort((a,b) => b[1].benef-a[1].benef).map(([nome, m]) => `
+    <div class="muni-card">
+      <div class="muni-title">${nome}</div>
+      <div class="muni-ativ">🌱 ${m.atividades.join(' · ')}</div>
+      <div class="muni-grid">
+        <div class="muni-stat"><div class="muni-num">${m.benef}</div><div class="muni-lbl">Beneficiários</div></div>
+        <div class="muni-stat"><div class="muni-num" style="color:#2a78d6;">${pct(m.mulheres,m.benef)}</div><div class="muni-lbl">Mulheres</div></div>
+        <div class="muni-stat"><div class="muni-num" style="color:#1baf7a;">${pct(m.jovens,m.benef)}</div><div class="muni-lbl">Jovens</div></div>
+        <div class="muni-stat"><div class="muni-num" style="color:#eda100;">${pct(m.quil,m.benef)}</div><div class="muni-lbl">Quilombolas</div></div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('panel-muni').innerHTML = btns + cards;
+}
+
+function setLoteSelect(l) {
+  loteAtivo = l;
+  renderMuni(dadosPAP);
+}
+
+function setLote(l, el) {
+  loteAtivo = l;
+  renderMuni(dadosPAP);
+}
+
+function renderAtiv(dados) {
+  const lotes = getLotes(dados);
+  const selectHtml = `<div class="lote-select-wrap" style="margin-bottom:1rem;">
+    <label>Filtrar por lote:</label>
+    <select onchange="loteAtivo=this.value;renderAtiv(dadosPAP);">
+      <option value="todos">Todos os lotes</option>
+      ${lotes.map(l=>`<option value="${l}" ${loteAtivo===l?'selected':''}>${l}</option>`).join('')}
+    </select>
+  </div>`;
+  const ativMap = {};
+  filtrar(dados).forEach(d => {
+    if (!ativMap[d.atividade]) ativMap[d.atividade] = 0;
+    ativMap[d.atividade] += d.benef;
+  });
+  const sorted = Object.entries(ativMap).sort((a,b) => b[1]-a[1]);
+  const maxA = sorted[0]?.[1] || 1;
+
+  const bars = sorted.map(([nome, total]) => `
+    <div class="bar-row">
+      <div class="bar-hd"><span class="bar-name">${nome}</span><span class="bar-val">${total} benef.</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(total/maxA*100).toFixed(0)}%;background:#2a78d6;"></div></div>
+    </div>`).join('');
+
+  document.getElementById('panel-ativ').innerHTML = selectHtml + `
+    <div class="card">
+      <p class="sec">Beneficiários por atividade econômica</p>
+      ${bars}
+    </div>
+    <div class="card">
+      <p class="sec">Distribuição — gráfico</p>
+      <div style="position:relative;height:${Math.max(sorted.length*35+60,200)}px;">
+        <canvas id="chart-ativ" role="img" aria-label="Distribuição por atividade econômica">${sorted.map(a=>a[0]+': '+a[1]).join(', ')}</canvas>
+      </div>
+    </div>`;
+
+  charts.ativ = new Chart(document.getElementById('chart-ativ'), {
+    type:'bar',
+    data:{
+      labels: sorted.map(a=>a[0]),
+      datasets:[{data:sorted.map(a=>a[1]), backgroundColor:'#2a78d6', borderRadius:3, borderSkipped:false}]
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:'#e1e0d9'}, ticks:{color:'#888780',font:{size:11}}},
+        y:{grid:{display:false}, ticks:{color:'#888780',font:{size:11}}}
+      }
+    }
+  });
+}
+
+function renderPerfil(dados) {
+  const lotes = getLotes(dados);
+  const selectHtmlP = `<div class="lote-select-wrap" style="margin-bottom:1rem;">
+    <label>Filtrar por lote:</label>
+    <select onchange="loteAtivo=this.value;renderPerfil(dadosPAP);">
+      <option value="todos">Todos os lotes</option>
+      ${lotes.map(l=>`<option value="${l}" ${loteAtivo===l?'selected':''}>${l}</option>`).join('')}
+    </select>
+  </div>`;
+  const muniMap = {};
+  filtrar(dados).forEach(d => {
+    if (!muniMap[d.municipio]) muniMap[d.municipio] = {lote:d.lote, benef:0, mulheres:0, jovens:0, quil:0};
+    muniMap[d.municipio].benef += d.benef;
+    muniMap[d.municipio].mulheres += d.mulheres;
+    muniMap[d.municipio].jovens += d.jovens;
+    muniMap[d.municipio].quil += d.quil;
+  });
+
+  const lotes = getLotes(dados);
+  const cores = ['#2a78d6','#1baf7a','#eda100','#e34948'];
+  const loteCorMap = {};
+  lotes.forEach((l,i) => loteCorMap[l] = cores[i]||'#888780');
+
+  const munis = Object.entries(muniMap).sort((a,b) => b[1].benef-a[1].benef);
+  const labels = munis.map(m => m[0]);
+  const bgMul = munis.map(m => loteCorMap[m[1].lote]||'#2a78d6');
+
+  document.getElementById('panel-perfil').innerHTML = selectHtmlP + `
+    <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;font-size:12px;color:#52514e;">
+      ${lotes.map((l,i) => `<span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:${cores[i]};display:inline-block;"></span>${l}</span>`).join('')}
+    </div>
+    <div class="card">
+      <p class="sec">% mulheres por município</p>
+      <div style="position:relative;height:${Math.max(munis.length*30+60,200)}px;">
+        <canvas id="chart-pmul" role="img" aria-label="Percentual de mulheres por município">${munis.map(m=>m[0]+': '+pct(m[1].mulheres,m[1].benef)).join(', ')}</canvas>
+      </div>
+    </div>
+    <div class="card">
+      <p class="sec">% jovens por município</p>
+      <div style="position:relative;height:${Math.max(munis.length*30+60,200)}px;">
+        <canvas id="chart-pjov" role="img" aria-label="Percentual de jovens por município">${munis.map(m=>m[0]+': '+pct(m[1].jovens,m[1].benef)).join(', ')}</canvas>
+      </div>
+    </div>
+    <div class="card">
+      <p class="sec">% quilombolas/PCT por município</p>
+      <div style="position:relative;height:${Math.max(munis.length*30+60,200)}px;">
+        <canvas id="chart-pquil" role="img" aria-label="Percentual de quilombolas por município">${munis.map(m=>m[0]+': '+pct(m[1].quil,m[1].benef)).join(', ')}</canvas>
+      </div>
+    </div>`;
+
+  ['pmul','pjov','pquil'].forEach((id, idx) => {
+    const campo = ['mulheres','jovens','quil'][idx];
+    charts[id] = new Chart(document.getElementById('chart-p'+['mul','jov','quil'][idx]), {
+      type:'bar',
+      data:{
+        labels,
+        datasets:[{
+          data: munis.map(m => +(m[1][campo]/m[1].benef*100).toFixed(1)),
+          backgroundColor: bgMul,
+          borderRadius:3, borderSkipped:false
+        }]
+      },
+      options:{
+        indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{color:'#e1e0d9'}, ticks:{color:'#888780',font:{size:10}, callback:v=>v+'%'}, max:100},
+          y:{grid:{display:false}, ticks:{color:'#888780',font:{size:10}}}
+        }
+      }
+    });
+  });
+}
+
+async function carregarDados() {
+  document.getElementById('sync-label').textContent = '⏳ Atualizando...';
+  ['geral','muni','ativ','perfil'].forEach(id => {
+    document.getElementById('panel-' + id).innerHTML = '<div class="loading">Carregando...</div>';
+  });
+  destruirCharts();
+  try {
+    const r = await fetch(API);
+    if (!r.ok) throw new Error(`Erro HTTP ${r.status}`);
+    const dados = await r.json();
+    const pap = dados['Perfil PAP'];
+    if (!pap) throw new Error('Aba "Perfil PAP" não encontrada na planilha.');
+    dadosPAP = parsePAP(pap);
+    if (dadosPAP.length === 0) throw new Error('Nenhum dado encontrado na aba Perfil PAP.');
+    renderGeral(dadosPAP);
+    renderMuni(dadosPAP);
+    renderAtiv(dadosPAP);
+    renderPerfil(dadosPAP);
+    const now = new Date();
+    document.getElementById('sync-label').innerHTML =
+      `✅ Sincronizado às ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')} de ${now.toLocaleDateString('pt-BR')}`;
+  } catch(e) {
+    ['geral','muni','ativ','perfil'].forEach(id => {
+      document.getElementById('panel-'+id).innerHTML =
+        `<div class="err">Não foi possível carregar os dados.<br><br>Detalhe: ${e.message}</div>`;
+    });
+    document.getElementById('sync-label').textContent = '❌ Erro na sincronização';
+  }
+}
+
+carregarDados();
+</script>
+</body>
+</html>
