@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSI — Dashboard de Monitoramento</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;background:#f5f5f3;color:#1a1a18;padding:16px;}
+.dash{max-width:980px;margin:0 auto;}
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px;background:#fff;border-radius:12px;padding:1rem 1.25rem;border:1px solid #e1e0d9;}
+.header h1{font-size:17px;font-weight:700;color:#1a1a18;}
+.header p{font-size:12px;color:#888780;margin-top:2px;}
+.badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;background:#e6f1fb;color:#185fa5;white-space:nowrap;}
+.btn{font-size:12px;padding:6px 14px;border:1px solid #c3c2b7;border-radius:6px;background:#fff;cursor:pointer;font-family:Arial,sans-serif;color:#444;}
+.btn:hover{background:#f5f5f3;}
+.tabs{display:flex;gap:2px;margin-bottom:1.25rem;border-bottom:1px solid #e1e0d9;}
+.tab{padding:8px 16px;font-size:13px;cursor:pointer;color:#888780;border:none;border-bottom:2px solid transparent;background:none;font-family:Arial,sans-serif;}
+.tab.active{color:#1a1a18;border-bottom-color:#1a1a18;font-weight:700;}
+.panel{display:none;}.panel.active{display:block;}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.25rem;}
+.kpi{background:#fff;border-radius:8px;padding:.875rem 1rem;border:1px solid #e1e0d9;}
+.kpi-label{font-size:11px;color:#888780;margin-bottom:5px;}
+.kpi-value{font-size:20px;font-weight:700;color:#1a1a18;line-height:1.1;}
+.kpi-sub{font-size:11px;color:#52514e;margin-top:3px;}
+.sec{font-size:11px;font-weight:700;color:#888780;letter-spacing:.05em;text-transform:uppercase;margin-bottom:10px;}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:1.25rem;}
+.tbl th{text-align:left;padding:8px;color:#888780;font-weight:600;border-bottom:1px solid #e1e0d9;font-size:11px;background:#f9f9f7;}
+.tbl td{padding:9px 8px;border-bottom:1px solid #e1e0d9;color:#1a1a18;vertical-align:middle;}
+.tbl tr.tot td{font-weight:700;background:#f5f5f3;}
+.bar{width:100%;height:5px;background:#f1efe8;border-radius:3px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:3px;}
+.pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;}
+.pg{background:#eaf3de;color:#3b6d11;}
+.py{background:#faeeda;color:#854f0b;}
+.pr{background:#fcebeb;color:#a32d2d;}
+.sem{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;}
+.sg{background:#3b6d11;}.sy{background:#eda100;}.sr{background:#e34948;}
+.ind-hd{display:grid;grid-template-columns:2.2fr 1fr 1fr 1fr 90px;gap:6px;padding:6px 0;font-size:10px;font-weight:700;color:#888780;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #c3c2b7;margin-bottom:3px;}
+.ind-row{display:grid;grid-template-columns:2.2fr 1fr 1fr 1fr 90px;gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid #e1e0d9;font-size:12px;}
+.prod-card{background:#fff;border:1px solid #e1e0d9;border-radius:12px;padding:.875rem 1rem;margin-bottom:10px;}
+.prod-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;}
+.prod-title{font-size:13px;font-weight:700;color:#1a1a18;line-height:1.4;}
+.prod-comp{font-size:11px;color:#888780;margin-top:2px;}
+.loading{text-align:center;padding:2rem;color:#888780;font-size:13px;background:#fff;border-radius:8px;border:1px solid #e1e0d9;}
+.err{text-align:center;padding:1.5rem;color:#a32d2d;font-size:13px;background:#fcebeb;border-radius:8px;border:1px solid #f09595;line-height:1.6;}
+.sync-row{display:flex;align-items:center;gap:8px;margin-bottom:1rem;font-size:12px;color:#888780;flex-wrap:wrap;}
+.card-wrap{background:#fff;border-radius:12px;padding:1rem 1.25rem;border:1px solid #e1e0d9;margin-bottom:1.25rem;}
+.two-bars{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;}
+.bar-label{font-size:10px;color:#888780;margin-bottom:3px;}
+.nota{font-size:11px;color:#888780;margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="dash">
+  <div class="header">
+    <div>
+      <h1>PSI — Piauí Sustentável Inclusivo</h1>
+      <p>BR-L1542 · BID/FIDA · Monitoramento semanal</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <span class="badge">Revisão 2026.1</span>
+      <button class="btn" onclick="carregarDados()">↻ Atualizar dados</button>
+    </div>
+  </div>
+
+  <div class="sync-row" id="sync-label">⏳ Carregando dados da planilha...</div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="aba('fin',this)">📊 Financeiro</button>
+    <button class="tab" onclick="aba('ind',this)">✅ Indicadores</button>
+    <button class="tab" onclick="aba('prod',this)">📦 Produtos críticos</button>
+  </div>
+
+  <div id="panel-fin" class="panel active"><div class="loading">Carregando...</div></div>
+  <div id="panel-ind" class="panel"><div class="loading">Carregando...</div></div>
+  <div id="panel-prod" class="panel"><div class="loading">Carregando...</div></div>
+</div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbyYv7Lcjlq6i9tqKgvBfJp5p9SmBYjEN0v4gI4j-P_vUeHOYdWHR2MvyU0biOZPM5a5rQ/exec';
+
+function percEsperado() {
+  const ini = new Date(2023, 10, 1);
+  const hoje = new Date();
+  const meses = (hoje.getFullYear() - ini.getFullYear()) * 12 + (hoje.getMonth() - ini.getMonth());
+  return Math.min(meses / 72, 1);
+}
+
+function aba(id, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  el.classList.add('active');
+}
+
+function num(s) {
+  if (s === null || s === undefined || s === '') return null;
+  const n = parseFloat(String(s).replace(',', '.').replace(/[^\d.\-]/g, ''));
+  return isNaN(n) ? null : n;
+}
+function pct(v, dec=1) { return (v * 100).toFixed(dec) + '%'; }
+function statusCor(real, esperado) {
+  if (real === null) return null;
+  if (real >= esperado * 0.9) return 'verde';
+  if (real >= esperado * 0.7) return 'amarelo';
+  return 'vermelho';
+}
+function pillCls(s) { s=(s||'').toLowerCase(); if(s.includes('verde'))return'pg'; if(s.includes('amar'))return'py'; return'pr'; }
+function pillLabel(s) { s=(s||'').toLowerCase(); if(s.includes('verde'))return'No prazo'; if(s.includes('amar'))return'Em andamento'; return'Crítico'; }
+function semCls(s) { s=(s||'').toLowerCase(); if(s.includes('verde'))return'sg'; if(s.includes('amar'))return'sy'; return'sr'; }
+
+let chartInst = null;
+
+function renderFin(rows) {
+  const esperado = percEsperado();
+  const data = rows.slice(4, 8);
+  let kD=0, kC=0, kE=0, kP=0;
+
+  const tRows = data.map((r) => {
+    const nome = r[0] || '';
+    const plan=num(r[2])||0, comp=num(r[3])||0, exec_=num(r[5])||0, per=num(r[7])||0;
+    kD+=plan; kC+=comp; kE+=exec_; kP+=per;
+    const pC = plan>0 ? comp/plan : 0;
+    const pE = plan>0 ? exec_/plan : 0;
+    const st = statusCor(pE, esperado);
+    const barC = st==='verde' ? '#1baf7a' : st==='amarelo' ? '#eda100' : '#e34948';
+    const pill = st==='verde' ? 'pg' : st==='amarelo' ? 'py' : 'pr';
+    const plabel = st==='verde' ? 'No prazo' : st==='amarelo' ? 'Em andamento' : 'Crítico';
+    return `<tr>
+      <td><strong>${nome}</strong></td>
+      <td style="text-align:center">${plan.toFixed(2)}</td>
+      <td style="text-align:center">${comp.toFixed(2)}</td>
+      <td style="text-align:center">${pct(pC)}</td>
+      <td style="text-align:center">${exec_.toFixed(2)}</td>
+      <td style="text-align:center">${pct(pE)}</td>
+      <td style="text-align:center;font-size:11px;color:#888780;">${pct(esperado)}</td>
+      <td><div class="bar"><div class="bar-fill" style="width:${Math.min(pE*100,100).toFixed(0)}%;background:${barC};"></div></div></td>
+      <td><span class="pill ${pill}">${plabel}</span></td>
+    </tr>`;
+  }).join('');
+
+  const pCT = kD>0 ? kC/kD : 0;
+  const pET = kD>0 ? kE/kD : 0;
+  const stT = statusCor(pET, esperado);
+
+  const desRows = rows.slice(11, 13);
+  const bidData = desRows[0] ? desRows[0].slice(1,7).map(v=>num(v)||0) : [3.8,10.3,19.5,25,20.5,21.3];
+  const fidaData = desRows[1] ? desRows[1].slice(1,7).map(v=>num(v)||0) : [0.7,1.9,1.5,4,6.5,5];
+
+  document.getElementById('panel-fin').innerHTML = `
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Planejado acumulado</div><div class="kpi-value">US$ ${kD.toFixed(2)} mi</div></div>
+      <div class="kpi"><div class="kpi-label">Comprometido</div><div class="kpi-value">US$ ${kC.toFixed(2)} mi</div><div class="kpi-sub">${pct(pCT)} do planejado</div></div>
+      <div class="kpi"><div class="kpi-label">Executado acumulado</div><div class="kpi-value">US$ ${kE.toFixed(2)} mi</div><div class="kpi-sub">${pct(pET)} do planejado</div></div>
+      <div class="kpi"><div class="kpi-label">Executado no período</div><div class="kpi-value">US$ ${kP.toFixed(2)} mi</div></div>
+      <div class="kpi"><div class="kpi-label">Ritmo esperado hoje</div><div class="kpi-value">${pct(esperado)}</div><div class="kpi-sub">31 de 72 meses</div></div>
+    </div>
+    <div class="card-wrap">
+      <p class="sec">Execução por componente — US$ mi</p>
+      <div style="overflow-x:auto;">
+      <table class="tbl">
+        <thead><tr><th>Componente</th><th>Planejado</th><th>Comprom.</th><th>% Comp.</th><th>Executado</th><th>% Exec.</th><th>% Esperado</th><th>Progresso</th><th>Status</th></tr></thead>
+        <tbody>${tRows}
+        <tr class="tot">
+          <td>Total</td>
+          <td style="text-align:center">${kD.toFixed(2)}</td>
+          <td style="text-align:center">${kC.toFixed(2)}</td>
+          <td style="text-align:center">${pct(pCT)}</td>
+          <td style="text-align:center">${kE.toFixed(2)}</td>
+          <td style="text-align:center">${pct(pET)}</td>
+          <td style="text-align:center">${pct(esperado)}</td>
+          <td></td>
+          <td><span class="pill ${stT==='verde'?'pg':stT==='amarelo'?'py':'pr'}">${stT==='verde'?'No prazo':stT==='amarelo'?'Em andamento':'Crítico'}</span></td>
+        </tr></tbody>
+      </table></div>
+    </div>
+    <div class="card-wrap">
+      <p class="sec">Projeção de desembolsos 2024–2029 — US$ mi</p>
+      <div style="display:flex;gap:14px;margin-bottom:10px;font-size:12px;color:#52514e;">
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#2a78d6;display:inline-block;"></span>BID</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#1baf7a;display:inline-block;"></span>FIDA</span>
+      </div>
+      <div style="position:relative;width:100%;height:260px;"><canvas id="chart-desemb"></canvas></div>
+      <p class="nota">Em 2026, desembolso do BID previsto para setembro e do FIDA para outubro.</p>
+    </div>`;
+
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+
+  const anosD = ['2024','2025','2026','2027','2028','2029'];
+  const totaisD = anosD.map((_, i) => bidData[i] + fidaData[i]);
+
+  const totalLabelPlugin = {
+    id: 'totalLabel',
+    afterDatasetsDraw(chart) {
+      const { ctx, scales: { x, y } } = chart;
+      ctx.save();
+      ctx.font = '700 12px Arial';
+      ctx.fillStyle = '#1a1a18';
+      ctx.textAlign = 'center';
+      totaisD.forEach((t, i) => {
+        const xPos = x.getPixelForValue(i);
+        const yPos = y.getPixelForValue(t) - 8;
+        ctx.fillText('$' + t.toFixed(1) + 'mi', xPos, yPos);
+      });
+      ctx.restore();
+    }
+  };
+  const mesPlugin = {
+    id: 'mesLabel',
+    afterDatasetsDraw(chart) {
+      const { ctx, scales: { x, y } } = chart;
+      const idx2026 = 2;
+      ctx.save();
+      ctx.font = '600 10px Arial';
+      ctx.textAlign = 'center';
+      const xPos = x.getPixelForValue(idx2026);
+      const bidTop = y.getPixelForValue(fidaData[idx2026] + bidData[idx2026] / 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('set/26', xPos, bidTop + 4);
+      const fidaTop = y.getPixelForValue(fidaData[idx2026] / 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('out/26', xPos, fidaTop + 4);
+      ctx.restore();
+    }
+  };
+
+  chartInst = new Chart(document.getElementById('chart-desemb'), {
+    type: 'bar',
+    data: {
+      labels: anosD,
+      datasets: [
+        {label:'BID', data:bidData, backgroundColor:'#2a78d6', borderRadius:3, borderSkipped:false},
+        {label:'FIDA', data:fidaData, backgroundColor:'#1baf7a', borderRadius:3, borderSkipped:false}
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      layout: { padding: { top: 24 } },
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{stacked:true, grid:{display:false}, ticks:{color:'#888780', font:{size:11}}},
+        y:{stacked:true, grid:{color:'#e1e0d9'}, ticks:{color:'#888780', font:{size:10}, callback:v=>'$'+v+'mi'}}
+      }
+    },
+    plugins: [totalLabelPlugin, mesPlugin]
+  });
+}
+
+function renderInd(rows) {
+  const esperado = percEsperado();
+  const data = rows.slice(3).filter(r => r[0] && String(r[0]).trim() && r[0] !== 'Cód.');
+  let nV=0, nA=0, nR=0;
+
+  const itens = data.map(r => {
+    const cod=r[0]||'', nome=r[1]||'', lb=r[3]||'', meta=r[4]||'', real=r[5], obs=r[8]||'';
+    const realNum = num(real);
+    const metaNum = num(String(meta).replace(/\./g,''));
+    const prog = (realNum !== null && metaNum && metaNum > 0) ? realNum/metaNum : null;
+    const st = statusCor(prog, esperado);
+    const sc = st==='verde'?'sg':st==='amarelo'?'sy':'sr';
+    if(sc==='sg') nV++; else if(sc==='sy') nA++; else nR++;
+    const barC = sc==='sg'?'#1baf7a':sc==='sy'?'#eda100':'#e34948';
+    const barW = prog !== null ? Math.min(prog*100, 100) : 0;
+    const progStr = prog !== null ? pct(prog) : '—';
+    const pc = sc==='sg'?'pg':sc==='sy'?'py':'pr';
+    const pl = sc==='sg'?'No prazo':sc==='sy'?'Em andamento':'Crítico';
+    return `<div class="ind-row">
+      <div style="display:flex;align-items:flex-start;gap:5px;"><span class="sem ${sc}"></span><span><strong>${cod}</strong> ${nome}</span></div>
+      <div style="color:#888780;font-size:11px;">${lb} → ${meta}</div>
+      <div style="color:#52514e;font-size:11px;">${realNum !== null ? realNum.toLocaleString('pt-BR') : '—'}</div>
+      <div>
+        <div style="font-size:11px;color:#52514e;margin-bottom:3px;">${progStr}</div>
+        <div class="bar"><div class="bar-fill" style="width:${Math.min(barW,100).toFixed(0)}%;background:${barC};"></div></div>
+      </div>
+      <div><span class="pill ${pc}">${pl}</span></div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('panel-ind').innerHTML = `
+    <div class="kpi-row" style="margin-bottom:1rem;">
+      <div class="kpi"><div class="kpi-label">Total indicadores</div><div class="kpi-value">${nV+nA+nR}</div></div>
+      <div class="kpi"><div class="kpi-label">No prazo</div><div class="kpi-value" style="color:#3b6d11;">${nV}</div></div>
+      <div class="kpi"><div class="kpi-label">Em andamento</div><div class="kpi-value" style="color:#854f0b;">${nA}</div></div>
+      <div class="kpi"><div class="kpi-label">Crítico</div><div class="kpi-value" style="color:#a32d2d;">${nR}</div></div>
+      <div class="kpi"><div class="kpi-label">Ritmo esperado</div><div class="kpi-value">${pct(esperado)}</div></div>
+    </div>
+    <div class="card-wrap">
+      <div class="ind-hd"><div>Indicador</div><div>LB → Meta</div><div>Realizado</div><div>% Progresso</div><div>Status</div></div>
+      ${itens}
+    </div>`;
+}
+
+function renderProd(rows) {
+  const esperado = percEsperado();
+  const data = rows.slice(3).filter(r => r[0] && String(r[0]).trim() && r[0] !== '#');
+
+  const cards = data.map(r => {
+    const nome=r[1]||'', comp=r[2]||'', resp=r[3]||'';
+    const metaPOA = num(String(r[4]||'').replace(/\./g,''));
+    const metaFin = num(String(r[5]||'').replace(/\./g,''));
+    const real = num(String(r[6]||'').replace(/\./g,''));
+    const obs = r[12]||'';
+
+    const percPOA = (real !== null && metaPOA && metaPOA > 0) ? real/metaPOA : null;
+    const percFin = (real !== null && metaFin && metaFin > 0) ? real/metaFin : null;
+    const st = statusCor(percFin, esperado);
+    const pc = st==='verde'?'pg':st==='amarelo'?'py':'pr';
+    const pl = st==='verde'?'No prazo':st==='amarelo'?'Em andamento':'Crítico';
+
+    const barCPOA = percPOA !== null ? (percPOA>=esperado*0.9?'#1baf7a':percPOA>=esperado*0.7?'#eda100':'#e34948') : '#e1e0d9';
+    const barCFin = percFin !== null ? (percFin>=esperado*0.9?'#1baf7a':percFin>=esperado*0.7?'#eda100':'#e34948') : '#e1e0d9';
+
+    return `<div class="prod-card">
+      <div class="prod-hd">
+        <div><div class="prod-title">${nome}</div><div class="prod-comp">${comp} · ${resp}</div></div>
+        <span class="pill ${pc}">${pl}</span>
+      </div>
+      <div style="font-size:11px;color:#888780;margin-bottom:8px;">
+        Realizado: <strong>${real !== null ? real.toLocaleString('pt-BR') : '—'}</strong>
+        · Meta POA: ${metaPOA ? metaPOA.toLocaleString('pt-BR') : '—'}
+        · Meta Final: ${metaFin ? metaFin.toLocaleString('pt-BR') : '—'}
+        · Esperado: ${pct(esperado)}
+      </div>
+      <div class="two-bars">
+        <div>
+          <div class="bar-label">% Meta POA 2026: ${percPOA !== null ? pct(percPOA) : '—'}</div>
+          <div class="bar"><div class="bar-fill" style="width:${Math.min((percPOA||0)*100,100).toFixed(0)}%;background:${barCPOA};"></div></div>
+        </div>
+        <div>
+          <div class="bar-label">% Meta Final: ${percFin !== null ? pct(percFin) : '—'}</div>
+          <div class="bar"><div class="bar-fill" style="width:${Math.min((percFin||0)*100,100).toFixed(0)}%;background:${barCFin};"></div></div>
+        </div>
+      </div>
+      ${obs ? `<div style="font-size:11px;color:#52514e;margin-top:8px;line-height:1.5;">${obs}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  document.getElementById('panel-prod').innerHTML = cards || '<div class="err">Nenhum produto encontrado.</div>';
+}
+
+async function carregarDados() {
+  document.getElementById('sync-label').textContent = '⏳ Atualizando...';
+  ['fin','ind','prod'].forEach(id => {
+    document.getElementById('panel-' + id).innerHTML = '<div class="loading">Carregando...</div>';
+  });
+  try {
+    const r = await fetch(API);
+    if (!r.ok) throw new Error(`Erro HTTP ${r.status}`);
+    const dados = await r.json();
+    if (dados.FINANCEIRO) renderFin(dados.FINANCEIRO);
+    else document.getElementById('panel-fin').innerHTML = '<div class="err">Aba FINANCEIRO não encontrada.</div>';
+    if (dados.INDICADORES) renderInd(dados.INDICADORES);
+    else document.getElementById('panel-ind').innerHTML = '<div class="err">Aba INDICADORES não encontrada.</div>';
+    if (dados['PRODUTOS_CRÍTICOS']) renderProd(dados['PRODUTOS_CRÍTICOS']);
+    else document.getElementById('panel-prod').innerHTML = '<div class="err">Aba PRODUTOS_CRÍTICOS não encontrada.</div>';
+    const now = new Date();
+    document.getElementById('sync-label').innerHTML =
+      `✅ Sincronizado às ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')} de ${now.toLocaleDateString('pt-BR')}`;
+  } catch(e) {
+    ['fin','ind','prod'].forEach(id => {
+      document.getElementById('panel-' + id).innerHTML =
+        `<div class="err">Não foi possível carregar os dados.<br><br>Detalhe: ${e.message}</div>`;
+    });
+    document.getElementById('sync-label').textContent = '❌ Erro na sincronização';
+  }
+}
+
+carregarDados();
+</script>
+</body>
+</html>
