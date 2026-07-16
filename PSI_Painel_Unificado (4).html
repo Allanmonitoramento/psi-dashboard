@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSI — Painel de Monitoramento</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;background:#f5f5f3;color:#1a1a18;padding:16px;}
+.dash{max-width:1100px;margin:0 auto;}
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px;background:#fff;border-radius:12px;padding:1rem 1.25rem;border:1px solid #e1e0d9;}
+.header h1{font-size:17px;font-weight:700;color:#1a1a18;}
+.header p{font-size:12px;color:#888780;margin-top:2px;}
+.badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;background:#e6f1fb;color:#185fa5;white-space:nowrap;}
+.btn{font-size:12px;padding:6px 14px;border:1px solid #c3c2b7;border-radius:6px;background:#fff;cursor:pointer;font-family:Arial,sans-serif;color:#444;}
+.btn:hover{background:#f5f5f3;}
+.sync-row{font-size:12px;color:#888780;margin-bottom:1rem;}
+.tabs{display:flex;gap:2px;margin-bottom:1.25rem;border-bottom:1px solid #e1e0d9;flex-wrap:wrap;}
+.ttab{padding:8px 14px;font-size:13px;cursor:pointer;color:#888780;border:none;border-bottom:2px solid transparent;background:none;font-family:Arial,sans-serif;}
+.ttab.active{color:#1a1a18;border-bottom-color:#1a1a18;font-weight:700;}
+.tpanel{display:none;}.tpanel.active{display:block;}
+.subtabs{display:flex;gap:2px;margin-bottom:1rem;flex-wrap:wrap;}
+.stab{padding:6px 12px;font-size:12px;cursor:pointer;color:#888780;border:1px solid #e1e0d9;border-radius:20px;background:#fff;font-family:Arial,sans-serif;}
+.stab.active{color:#fff;background:#1a1a18;border-color:#1a1a18;font-weight:700;}
+.spanel{display:none;}.spanel.active{display:block;}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:1.25rem;}
+.kpi{background:#fff;border-radius:8px;padding:.875rem 1rem;border:1px solid #e1e0d9;}
+.kpi-label{font-size:11px;color:#888780;margin-bottom:5px;}
+.kpi-value{font-size:22px;font-weight:700;color:#1a1a18;line-height:1.1;}
+.kpi-sub{font-size:11px;color:#52514e;margin-top:3px;}
+.card{background:#fff;border-radius:12px;padding:1rem 1.25rem;border:1px solid #e1e0d9;margin-bottom:1.25rem;}
+.sec{font-size:11px;font-weight:700;color:#888780;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;}
+.fonte{font-size:11px;color:#888780;margin-bottom:12px;}
+.filtros{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center;}
+.filtros label{font-size:12px;color:#888780;font-weight:600;}
+.filtros select{font-size:12px;padding:5px 10px;border:1px solid #c3c2b7;border-radius:6px;background:#fff;color:#1a1a18;font-family:Arial,sans-serif;cursor:pointer;}
+.acordo-card{background:#fff;border:1px solid #e1e0d9;border-radius:10px;padding:.875rem 1rem;margin-bottom:8px;border-left:4px solid #e1e0d9;}
+.acordo-card.concluido,.acordo-card.verde{border-left-color:#3b6d11;}
+.acordo-card.andamento,.acordo-card.amarelo{border-left-color:#eda100;}
+.acordo-card.nao-iniciado,.acordo-card.neutro{border-left-color:#888780;}
+.acordo-card.atrasado,.acordo-card.vermelho{border-left-color:#e34948;}
+.acordo-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px;}
+.acordo-titulo{font-size:13px;font-weight:600;color:#1a1a18;line-height:1.4;flex:1;}
+.pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;}
+.pill-g{background:#eaf3de;color:#3b6d11;}
+.pill-a{background:#faeeda;color:#854f0b;}
+.pill-r{background:#fcebeb;color:#a32d2d;}
+.pill-c{background:#f1efe8;color:#52514e;}
+.pill-b{background:#e6f1fb;color:#185fa5;}
+.acordo-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:#888780;margin-top:4px;}
+.acordo-obs{font-size:11px;color:#52514e;margin-top:6px;padding-top:6px;border-top:1px solid #f1efe8;line-height:1.5;}
+.bar-row{margin-bottom:9px;}
+.bar-hd{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;}
+.bar-track{width:100%;height:6px;background:#f1efe8;border-radius:3px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:3px;}
+.barw{margin-top:8px;}
+.barw .bar-hd{font-size:11px;color:#52514e;}
+.loading{text-align:center;padding:2rem;color:#888780;font-size:13px;}
+.err{padding:1.5rem;color:#a32d2d;font-size:13px;background:#fcebeb;border-radius:8px;line-height:1.6;}
+.aviso{padding:1.5rem;color:#52514e;font-size:13px;background:#fff;border:1px dashed #c3c2b7;border-radius:10px;line-height:1.7;}
+.aviso b{color:#1a1a18;}
+.aviso code{background:#f1efe8;padding:1px 5px;border-radius:4px;font-size:12px;}
+.miss-sep{font-size:13px;font-weight:700;color:#1a1a18;margin:1rem 0 .5rem;padding:.5rem .75rem;background:#f5f5f3;border-radius:6px;border-left:3px solid #2a78d6;}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}
+.yr{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px;}
+.yr b{width:44px;color:#1a1a18;}
+.yr .bar-track{flex:1;}
+.yr span.val{width:120px;text-align:right;color:#52514e;font-size:11px;}
+</style>
+</head>
+<body>
+<div class="dash">
+  <div class="header">
+    <div>
+      <h1>PSI — Painel de Monitoramento</h1>
+      <p>BR-L1542 · Piauí Sustentável e Inclusivo · Execução, indicadores e acordos BID/FIDA</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <span class="badge">Monitoramento &amp; Avaliação</span>
+      <button class="btn" onclick="carregarTudo()">↻ Atualizar</button>
+    </div>
+  </div>
+
+  <div class="sync-row" id="sync-label">⏳ Carregando dados...</div>
+
+  <div class="tabs">
+    <button class="ttab active" onclick="topo('geral',this)">🏠 Visão geral</button>
+    <button class="ttab" onclick="topo('financeiro',this)">📈 Financeiro</button>
+    <button class="ttab" onclick="topo('indicadores',this)">✅ Indicadores</button>
+    <button class="ttab" onclick="topo('produtos',this)">📦 Produtos críticos</button>
+    <button class="ttab" onclick="topo('aquisicoes',this)">🛒 Aquisições</button>
+    <button class="ttab" onclick="topo('pap',this)">👥 Perfil PAP</button>
+    <button class="ttab" onclick="topo('acordos',this)">📋 Acordos</button>
+  </div>
+
+  <div id="tp-geral" class="tpanel active"><div class="loading">Carregando...</div></div>
+  <div id="tp-financeiro" class="tpanel"><div class="loading">Carregando...</div></div>
+  <div id="tp-indicadores" class="tpanel"><div class="loading">Carregando...</div></div>
+  <div id="tp-produtos" class="tpanel"><div class="loading">Carregando...</div></div>
+  <div id="tp-aquisicoes" class="tpanel"><div class="loading">Carregando...</div></div>
+  <div id="tp-pap" class="tpanel"><div class="loading">Carregando...</div></div>
+
+  <div id="tp-acordos" class="tpanel">
+    <div class="subtabs">
+      <button class="stab active" onclick="subAcordo('ageral',this)">📊 Visão geral</button>
+      <button class="stab" onclick="subAcordo('missao25',this)">Missão 2025</button>
+      <button class="stab" onclick="subAcordo('missao26',this)">Missão 2026</button>
+      <button class="stab" onclick="subAcordo('carteira',this)">Revisão de Carteira</button>
+      <button class="stab" onclick="subAcordo('ucp',this)">Reuniões UCP 2026</button>
+    </div>
+    <div id="sp-ageral" class="spanel active"><div class="loading">Carregando...</div></div>
+    <div id="sp-missao25" class="spanel"><div class="loading">Carregando...</div></div>
+    <div id="sp-missao26" class="spanel"><div class="loading">Carregando...</div></div>
+    <div id="sp-carteira" class="spanel"><div class="loading">Carregando...</div></div>
+    <div id="sp-ucp" class="spanel"><div class="loading">Carregando...</div></div>
+  </div>
+</div>
+
+<script>
+const ACORDOS_API = 'https://script.google.com/macros/s/AKfycbzmvpsrr1EMiorX8GTz8N6R_m_e3nEpW4hvMoV6jBL8YT0lMhcZX_M-s9sgDcujiTcYjQ/exec';
+const MONITORAMENTO_API = 'https://script.google.com/macros/s/AKfycbwQVt5-wVNycKRtvvSZsFzLzkCujGDM6iOxpWWEEsEVEjSX0bS07bHMKIu8_6o1CxRLCg/exec';
+
+let dadosAcordos = { m25:[], m26:[], rc:[], ucp:{headers:[],itens:[]} };
+let fin=null, ind=[], prod=[], aqui=[], pap=[];
+
+/* ---------- navegação ---------- */
+function topo(id, el){
+  document.querySelectorAll('.tpanel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ttab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tp-'+id).classList.add('active'); el.classList.add('active');
+}
+function subAcordo(id, el){
+  const c=document.getElementById('tp-acordos');
+  c.querySelectorAll('.spanel').forEach(p=>p.classList.remove('active'));
+  c.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('sp-'+id).classList.add('active'); el.classList.add('active');
+}
+
+/* ---------- utilidades ---------- */
+function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function numBR(v){ const s=String(v==null?'':v).replace(/[^\d,.-]/g,''); if(!s) return 0; const n=parseFloat(s.replace(/\./g,'').replace(',','.')); return isNaN(n)?0:n; }
+function pctBR(v){ if(v==null||String(v).trim()==='') return null; const n=parseFloat(String(v).replace('%','').replace(/\./g,'').replace(',','.')); return isNaN(n)?null:n; }
+function fmtInt(n){ return Number(n||0).toLocaleString('pt-BR',{maximumFractionDigits:0}); }
+function fmtR$(n){ return 'R$ '+Number(n||0).toLocaleString('pt-BR',{maximumFractionDigits:0}); }
+function txt(v){ const s=String(v==null?'':v).trim(); return s===''?'—':s; }
+
+function statusClasse(v){
+  const s=String(v||'').toLowerCase();
+  if(s.includes('verde')||s.includes('🟢')||s.includes('conclu')||s.includes('super')) return 'g';
+  if(s.includes('amarelo')||s.includes('🟡')||s.includes('atenç')||s.includes('atenc')||s.includes('andamento')) return 'a';
+  if(s.includes('vermelho')||s.includes('🔴')||s.includes('crític')||s.includes('critic')||s.includes('atras')) return 'r';
+  return 'c';
+}
+function statusNome(cl){ return {g:'verde',a:'amarelo',r:'vermelho',c:'neutro'}[cl]; }
+function corStatus(cl){ return {g:'#3b6d11',a:'#eda100',r:'#e34948',c:'#888780'}[cl]; }
+function statusPillMonit(v){
+  if(!String(v||'').trim()) return '';
+  const cl=statusClasse(v); const ic={g:'🟢',a:'🟡',r:'🔴',c:'•'}[cl];
+  return `<span class="pill pill-${cl}">${ic} ${esc(v)}</span>`;
+}
+function contarCores(arr, campo){ const c={g:0,a:0,r:0,c:0,total:0}; arr.forEach(x=>{ const v=x[campo]; if(String(v||'').trim()){ c[statusClasse(v)]++; c.total++; } }); return c; }
+function barrasCores(c){
+  const it=[{k:'g',l:'Verde',cor:'#3b6d11'},{k:'a',l:'Amarelo',cor:'#eda100'},{k:'r',l:'Vermelho',cor:'#e34948'}];
+  const tot=c.total||1;
+  return it.map(i=>{const v=c[i.k]||0;const p=(v/tot*100).toFixed(0);return `<div class="bar-row"><div class="bar-hd"><span>${i.l}</span><span style="color:#888780;">${v} (${p}%)</span></div><div class="bar-track"><div class="bar-fill" style="width:${p}%;background:${i.cor};"></div></div></div>`;}).join('');
+}
+function barW(label, pct, cor, sub){
+  const w=Math.max(0,Math.min(100,pct==null?0:pct));
+  return `<div class="barw"><div class="bar-hd"><span>${label}</span><span style="color:#888780;">${pct==null?'—':pct.toFixed(0)+'%'}${sub?' · '+sub:''}</span></div><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${cor};"></div></div></div>`;
+}
+function findHeaderRow(rows, must){
+  for(let i=0;i<rows.length;i++){ const line=rows[i].map(c=>String(c).toLowerCase().replace(/\n/g,' ')).join(' | '); if(must.every(m=>line.includes(m.toLowerCase()))) return i; }
+  return -1;
+}
+function colIdx(H, subs){ for(let i=0;i<H.length;i++){ const h=String(H[i]).toLowerCase().replace(/\n/g,' '); if(subs.some(s=>h.includes(s.toLowerCase()))) return i; } return -1; }
+
+/* ============================================================
+   ACORDOS
+   ============================================================ */
+function excelDate(v){ if(!v||v==='—'||v==='') return '—'; const s=String(v).trim(); if(s.match(/^\d{1,2}\/\d{2}\/\d{2,4}$/)) return s; const n=parseFloat(s.replace(',','.')); if(!isNaN(n)&&n>1000){const e=new Date(1899,11,30);e.setDate(e.getDate()+Math.round(n));return e.toLocaleDateString('pt-BR');} return s; }
+function normStatus(s){ s=String(s||'').toLowerCase().trim(); if(s.includes('conclu'))return'concluido'; if(s.includes('andamento')||s.includes('execu')||(s.includes('iniciado')&&!s.includes('não')&&!s.includes('nao')))return'andamento'; if(s.includes('atraso'))return'atrasado'; if(s.includes('não inici')||s.includes('nao inici'))return'nao-iniciado'; if(s.includes('inicia')&&!s.includes('não')&&!s.includes('nao'))return'andamento'; return'nao-iniciado'; }
+function statusPill(s){ const n=normStatus(s); if(n==='concluido')return'<span class="pill pill-g">✓ Concluído</span>'; if(n==='andamento')return'<span class="pill pill-a">⟳ Em andamento</span>'; if(n==='atrasado')return'<span class="pill pill-r">⚠ Atrasado</span>'; return'<span class="pill pill-c">— Não iniciado</span>'; }
+function contarStatus(arr){ const c={concluido:0,andamento:0,atrasado:0,'nao-iniciado':0}; arr.forEach(a=>{c[normStatus(a.status)]++;}); return c; }
+function acharCabecalho(rows){ for(let i=0;i<rows.length;i++){ if(rows[i].filter(c=>String(c).trim()!=='').length>=3) return i; } return 0; }
+function parseGenerico(rows){ if(!rows||!rows.length) return {headers:[],itens:[]}; const hi=acharCabecalho(rows); const headers=rows[hi].map(h=>String(h).trim()); const stc=headers.findIndex(h=>/status|situa/i.test(h)); const itens=[]; for(let i=hi+1;i<rows.length;i++){ const r=rows[i]; if(r.filter(c=>String(c).trim()!=='').length<2) continue; const campos={}; headers.forEach((h,idx)=>{if(h)campos[h]=String(r[idx]||'').trim();}); itens.push({campos,status:stc>=0?String(r[stc]||''):''}); } return {headers,itens}; }
+function parseMissao25(rows){ const a=[]; let m=''; for(let i=0;i<rows.length;i++){const r=rows[i];const c0=String(r[0]||'').trim();const c1=String(r[1]||'').trim(); if(c1.toUpperCase().includes('MISSÃO')||c1.toUpperCase().includes('ACORDOS DE MISSÃO')){m=c1;continue;} if(c0==='Nº'||c0==='N°')continue; const n=parseFloat(c0); if(!isNaN(n)&&n>0&&c1){a.push({num:c0,missao:m,acao:c1,responsavel:String(r[2]||''),prazo:excelDate(r[3]),status:String(r[4]||''),obs:String(r[5]||'')});}} return a; }
+function parseMissao26(rows){ const a=[]; let cab=false; for(let i=0;i<rows.length;i++){const r=rows[i];const c0=String(r[0]||'').trim(); if(c0==='ACORDOS DE MISSÃO 2026.1'||String(r[1]||'').toUpperCase()==='ÓRGÃO'){cab=true;continue;} if(!cab)continue; if(!c0||c0.toUpperCase().includes('ATUALIZADO')||c0.toUpperCase().includes('ATAULIZADO'))continue; if(c0.length>10){a.push({acao:c0,orgao:String(r[1]||''),setor:String(r[2]||''),responsavel:String(r[3]||''),inicio:excelDate(r[4]),prazo:excelDate(r[5]),status:String(r[6]||''),obs:String(r[7]||'')});}} return a; }
+function parseCarteira(rows){ const a=[]; let cab=false,num=0,cur=null; for(let i=0;i<rows.length;i++){const r=rows[i];const c0=String(r[0]||'').trim();const c1=String(r[1]||'').trim();const c2=String(r[2]||'').trim();const c3=String(r[3]||'').trim();const c4=String(r[4]||'').trim(); if(c0.toUpperCase()==='ACORDO'||c1.toUpperCase()==='ACORDO'){cab=true;continue;} if(!cab)continue; if(!c0&&!c1)continue; if(c0&&c0.length>5&&!c0.toUpperCase().includes('ACORDOS')){num++;cur={num,acordo:c0,indicador:c1,prazo:excelDate(c2||c3),status:c3||c4};a.push(cur);}else if(cur&&c1&&c1.length>5){cur.indicador+=(cur.indicador?' | ':'')+c1;}} return a; }
+
+function barrasStatus(c,total){ const it=[{l:'Concluído',k:'concluido',cor:'#3b6d11'},{l:'Em andamento',k:'andamento',cor:'#eda100'},{l:'Atrasado',k:'atrasado',cor:'#e34948'},{l:'Não iniciado',k:'nao-iniciado',cor:'#c3c2b7'}]; return it.map(i=>{const v=c[i.k]||0;const p=total>0?(v/total*100).toFixed(0):0;return `<div class="bar-row"><div class="bar-hd"><span>${i.l}</span><span style="color:#888780;">${v} (${p}%)</span></div><div class="bar-track"><div class="bar-fill" style="width:${p}%;background:${i.cor};"></div></div></div>`;}).join(''); }
+function renderAcordosGeral(){ const{m25,m26,rc,ucp}=dadosAcordos; const u=ucp.itens||[]; const todos=[...m25,...m26,...rc,...u]; const t=todos.length||1; const ct=contarStatus(todos); document.getElementById('sp-ageral').innerHTML=`<div class="kpi-row"><div class="kpi"><div class="kpi-label">Total de acordos</div><div class="kpi-value">${todos.length}</div><div class="kpi-sub">4 conjuntos</div></div><div class="kpi"><div class="kpi-label">Concluídos</div><div class="kpi-value" style="color:#3b6d11;">${ct.concluido||0}</div><div class="kpi-sub">${(((ct.concluido||0)/t)*100).toFixed(0)}%</div></div><div class="kpi"><div class="kpi-label">Em andamento</div><div class="kpi-value" style="color:#854f0b;">${ct.andamento||0}</div></div><div class="kpi"><div class="kpi-label">Atrasados</div><div class="kpi-value" style="color:#a32d2d;">${ct.atrasado||0}</div></div><div class="kpi"><div class="kpi-label">Não iniciados</div><div class="kpi-value" style="color:#888780;">${ct['nao-iniciado']||0}</div></div></div><div class="grid2"><div class="card"><p class="sec">Missão 2025 — ${m25.length}</p>${barrasStatus(contarStatus(m25),m25.length)}</div><div class="card"><p class="sec">Missão 2026 — ${m26.length}</p>${barrasStatus(contarStatus(m26),m26.length)}</div><div class="card"><p class="sec">Revisão de Carteira — ${rc.length}</p>${barrasStatus(contarStatus(rc),rc.length)}</div><div class="card"><p class="sec">Reuniões UCP 2026 — ${u.length}</p>${barrasStatus(contarStatus(u),u.length)}</div></div><div class="card"><p class="sec">Visão consolidada</p>${barrasStatus(ct,todos.length)}</div>`; }
+function renderAcordos25(fs='todos',fr='todos'){ const{m25}=dadosAcordos; const resp=[...new Set(m25.map(a=>a.responsavel).filter(Boolean))].sort(); let f=m25; if(fs!=='todos')f=f.filter(a=>normStatus(a.status)===fs); if(fr!=='todos')f=f.filter(a=>a.responsavel===fr); const cards=f.map(a=>{const ns=normStatus(a.status);return `<div class="acordo-card ${ns}"><div class="acordo-top"><div class="acordo-titulo">${a.num?`<span style="color:#888780;font-size:11px;">#${esc(a.num)}</span> `:''}${esc(a.acao)}</div>${statusPill(a.status)}</div><div class="acordo-meta"><span>📌 ${esc(a.responsavel)||'—'}</span><span>📅 ${esc(a.prazo)}</span>${a.missao?`<span class="pill pill-b">${esc(a.missao)}</span>`:''}</div>${a.obs&&a.obs.trim()?`<div class="acordo-obs">💬 ${esc(a.obs)}</div>`:''}</div>`;}).join('')||'<div class="loading">Nenhum acordo com esse filtro.</div>'; document.getElementById('sp-missao25').innerHTML=`<div class="filtros"><label>Status:</label><select onchange="renderAcordos25(this.value, document.getElementById('resp25').value)"><option value="todos">Todos</option><option value="concluido" ${fs==='concluido'?'selected':''}>Concluído</option><option value="andamento" ${fs==='andamento'?'selected':''}>Em andamento</option><option value="atrasado" ${fs==='atrasado'?'selected':''}>Atrasado</option><option value="nao-iniciado" ${fs==='nao-iniciado'?'selected':''}>Não iniciado</option></select><label>Responsável:</label><select id="resp25" onchange="renderAcordos25(document.querySelector('#sp-missao25 select').value, this.value)"><option value="todos">Todos</option>${resp.map(r=>`<option value="${esc(r)}" ${fr===r?'selected':''}>${esc(r)}</option>`).join('')}</select><span style="font-size:12px;color:#888780;">${f.length} acordos</span></div>${cards}`; }
+function renderAcordos26(fs='todos',fr='todos',fo='todos'){ const{m26}=dadosAcordos; const resp=[...new Set(m26.map(a=>a.responsavel).filter(Boolean))].sort(); const org=[...new Set(m26.map(a=>a.orgao).filter(Boolean))].sort(); let f=m26; if(fs!=='todos')f=f.filter(a=>normStatus(a.status)===fs); if(fr!=='todos')f=f.filter(a=>a.responsavel===fr); if(fo!=='todos')f=f.filter(a=>a.orgao===fo); const cards=f.map(a=>{const ns=normStatus(a.status);return `<div class="acordo-card ${ns}"><div class="acordo-top"><div class="acordo-titulo">${esc(a.acao)}</div>${statusPill(a.status)}</div><div class="acordo-meta"><span>🏛 ${esc(a.orgao)||'—'}</span><span>👤 ${esc(a.responsavel)||'—'}</span><span>📂 ${esc(a.setor)||'—'}</span><span>📅 ${esc(a.prazo)}</span></div>${a.obs&&a.obs.trim()?`<div class="acordo-obs">💬 ${esc(a.obs)}</div>`:''}</div>`;}).join('')||'<div class="loading">Nenhum acordo com esse filtro.</div>'; document.getElementById('sp-missao26').innerHTML=`<div class="filtros"><label>Status:</label><select onchange="renderAcordos26(this.value, document.getElementById('resp26').value, document.getElementById('org26').value)"><option value="todos">Todos</option><option value="concluido" ${fs==='concluido'?'selected':''}>Concluído</option><option value="andamento" ${fs==='andamento'?'selected':''}>Em andamento</option><option value="atrasado" ${fs==='atrasado'?'selected':''}>Atrasado</option><option value="nao-iniciado" ${fs==='nao-iniciado'?'selected':''}>Não iniciado</option></select><label>Órgão:</label><select id="org26" onchange="renderAcordos26(document.querySelector('#sp-missao26 select').value, document.getElementById('resp26').value, this.value)"><option value="todos">Todos</option>${org.map(o=>`<option value="${esc(o)}" ${fo===o?'selected':''}>${esc(o)}</option>`).join('')}</select><label>Responsável:</label><select id="resp26" onchange="renderAcordos26(document.querySelector('#sp-missao26 select').value, this.value, document.getElementById('org26').value)"><option value="todos">Todos</option>${resp.map(r=>`<option value="${esc(r)}" ${fr===r?'selected':''}>${esc(r)}</option>`).join('')}</select><span style="font-size:12px;color:#888780;">${f.length} acordos</span></div>${cards}`; }
+function renderCarteira(){ const{rc}=dadosAcordos; const cards=rc.map(a=>{const ns=normStatus(a.status);return `<div class="acordo-card ${ns}"><div class="acordo-top"><div class="acordo-titulo">${a.num?`<span style="color:#888780;font-size:11px;">#${esc(a.num)}</span> `:''}${esc(a.acordo)}</div>${statusPill(a.status)}</div><div class="acordo-meta"><span>📅 ${esc(a.prazo)}</span>${a.indicador?`<span>📊 ${esc(a.indicador)}</span>`:''}</div></div>`;}).join('')||'<div class="loading">Nenhum acordo.</div>'; document.getElementById('sp-carteira').innerHTML=`<div class="fonte">${rc.length} acordos da Revisão de Carteira BID 2026.1</div>${cards}`; }
+function renderUCP(){ const{ucp}=dadosAcordos; const it=ucp.itens||[]; if(!it.length){document.getElementById('sp-ucp').innerHTML='<div class="loading">Sem registros de Reuniões UCP 2026.</div>';return;} const cards=it.map(x=>{const camp=x.campos;const ch=Object.keys(camp).filter(k=>camp[k]&&camp[k].trim());const stk=ch.find(k=>/status|situa/i.test(k));const tk=ch.find(k=>!/status|situa/i.test(k));const tit=tk?camp[tk]:'(sem título)';const meta=ch.filter(k=>k!==tk&&k!==stk).map(k=>`<span>${esc(k)}: ${esc(camp[k])}</span>`).join('');const ns=stk?normStatus(camp[stk]):'nao-iniciado';return `<div class="acordo-card ${ns}"><div class="acordo-top"><div class="acordo-titulo">${esc(tit)}</div>${stk?statusPill(camp[stk]):''}</div>${meta?`<div class="acordo-meta">${meta}</div>`:''}</div>`;}).join(''); document.getElementById('sp-ucp').innerHTML=`<div class="fonte">${it.length} registros · Reuniões UCP 2026</div>${cards}`; }
+
+/* ============================================================
+   MONITORAMENTO — parsers
+   ============================================================ */
+function parseFinanceiro(rows){
+  const out={comp:[],total:null,proj:{anos:[],bid:[],fida:[]}};
+  if(!rows||!rows.length) return out;
+  const hi=findHeaderRow(rows,['componente','% executado']);
+  if(hi>=0){ const H=rows[hi]; const ci={c:colIdx(H,['componente']),disp:colIdx(H,['disponível','disponivel']),compr:colIdx(H,['comprometido']),pcompr:colIdx(H,['% comprometido']),exec:colIdx(H,['executado acum','executado']),pexec:colIdx(H,['% executado']),per:colIdx(H,['período','periodo']),pesp:colIdx(H,['% esperado','esperado']),st:colIdx(H,['status'])};
+    for(let i=hi+1;i<rows.length;i++){ const r=rows[i]; const nome=String(r[ci.c]||'').trim(); const up=nome.toUpperCase(); if(!nome){ if(String(r.join('')).toLowerCase().includes('projeç')) break; continue; } if(up.startsWith('PROJEÇ')||up.startsWith('PROJEC')) break; const o={nome,disp:r[ci.disp],compr:r[ci.compr],pcompr:r[ci.pcompr],exec:r[ci.exec],pexec:r[ci.pexec],per:r[ci.per],pesp:r[ci.pesp],status:ci.st>=0?r[ci.st]:''}; if(up==='TOTAL')out.total=o; else if(/^C\d/i.test(nome))out.comp.push(o); }
+  }
+  const pj=findHeaderRow(rows,['fonte','2026']);
+  if(pj>=0){ const H=rows[pj]; const idx=[]; H.forEach((h,i)=>{if(/^20\d\d$/.test(String(h).trim())){out.proj.anos.push(String(h).trim());idx.push(i);}}); for(let i=pj+1;i<rows.length;i++){ const r=rows[i]; const nm=String(r[0]||r[1]||'').trim().toUpperCase(); if(nm.includes('BID'))out.proj.bid=idx.map(ix=>r[ix]); else if(nm.includes('FIDA'))out.proj.fida=idx.map(ix=>r[ix]); } }
+  return out;
+}
+function parseIndicadores(rows){
+  const it=[]; if(!rows||!rows.length) return it;
+  const hi=findHeaderRow(rows,['indicador','realizado']); if(hi<0) return it;
+  const H=rows[hi]; const ci={cod:colIdx(H,['cód','cod']),ind:colIdx(H,['indicador']),un:colIdx(H,['unidade']),base:colIdx(H,['linha de base','base']),meta:colIdx(H,['meta final','meta']),real:colIdx(H,['realizado']),prog:colIdx(H,['% progresso','progresso']),st:colIdx(H,['status']),obs:colIdx(H,['observ'])};
+  for(let i=hi+1;i<rows.length;i++){ const r=rows[i]; const cod=String(r[ci.cod]||'').trim(); const ind=String(r[ci.ind]||'').trim(); if(!ind) continue; const m=cod.match(/^R?\d+/i); const res=m?m[0].toUpperCase():'Outros'; it.push({cod,res,ind,un:r[ci.un],base:r[ci.base],meta:r[ci.meta],real:r[ci.real],prog:ci.prog>=0?r[ci.prog]:'',status:ci.st>=0?r[ci.st]:'',obs:ci.obs>=0?r[ci.obs]:''}); }
+  return it;
+}
+function parseProdutos(rows){
+  const it=[]; if(!rows||!rows.length) return it;
+  let hi=findHeaderRow(rows,['produto','% meta poa']); if(hi<0) hi=findHeaderRow(rows,['produto','responsável']); if(hi<0) return it;
+  const H=rows[hi]; const ci={n:colIdx(H,['#']),p:colIdx(H,['produto']),comp:colIdx(H,['comp']),resp:colIdx(H,['respons']),mpoa:colIdx(H,['meta poa']),real:colIdx(H,['realizado']),ppoa:colIdx(H,['% meta poa']),pesp:colIdx(H,['% esperado','esperado']),st:colIdx(H,['status']),data:colIdx(H,['data']),obs:colIdx(H,['observ'])};
+  for(let i=hi+1;i<rows.length;i++){ const r=rows[i]; const p=String(r[ci.p]||'').trim(); if(!p||p.toUpperCase().includes('STATUS AUTOM')) continue; it.push({num:ci.n>=0?r[ci.n]:'',produto:p,comp:r[ci.comp],resp:r[ci.resp],mpoa:r[ci.mpoa],real:r[ci.real],ppoa:ci.ppoa>=0?r[ci.ppoa]:'',pesp:ci.pesp>=0?r[ci.pesp]:'',status:ci.st>=0?r[ci.st]:'',data:ci.data>=0?r[ci.data]:'',obs:ci.obs>=0?r[ci.obs]:''}); }
+  return it;
+}
+function parseAquisicoes(rows){
+  const it=[]; if(!rows||!rows.length) return it;
+  let hi=findHeaderRow(rows,['categoria']); if(hi<0) hi=findHeaderRow(rows,['execução']); if(hi<0) return it;
+  const H=rows[hi]; const ci={cat:colIdx(H,['categoria']),exec:colIdx(H,['execução','execucao','em execução']),plan:colIdx(H,['planejado']),data:colIdx(H,['última','ultima','atualiz'])};
+  for(let i=hi+1;i<rows.length;i++){ const r=rows[i]; const cat=String(r[ci.cat>=0?ci.cat:0]||'').trim(); if(!cat) continue; if(cat.toUpperCase().replace(/[^A-ZÁ-Ú]/g,'')==='TOTAL') continue; it.push({cat,exec:ci.exec>=0?r[ci.exec]:'',plan:ci.plan>=0?r[ci.plan]:'',data:ci.data>=0?r[ci.data]:''}); }
+  return it;
+}
+function parsePAP(rows){
+  const it=[]; if(!rows||!rows.length) return it;
+  let hi=findHeaderRow(rows,['município','atividade']); if(hi<0) hi=findHeaderRow(rows,['municipio','atividade']); if(hi<0) hi=findHeaderRow(rows,['lote','município']); if(hi<0) return it;
+  const H=rows[hi]; const ci={lote:colIdx(H,['lote']),mun:colIdx(H,['município','municipio']),ativ:colIdx(H,['atividade']),fam:colIdx(H,['beneficiár','beneficiar','famílias','familias']),mulh:colIdx(H,['mulher']),jov:colIdx(H,['jovens','jovem']),quil:colIdx(H,['quilombola']),valor:colIdx(H,['valor estimado','valor total']),drep:colIdx(H,['previsão','previsao','primeiro repasse']),vrep:colIdx(H,['valor do primeiro'])};
+  for(let i=hi+1;i<rows.length;i++){ const r=rows[i]; const mun=String(r[ci.mun>=0?ci.mun:1]||'').trim(); if(!mun) continue; it.push({lote:ci.lote>=0?String(r[ci.lote]||'').trim():'',mun,ativ:ci.ativ>=0?String(r[ci.ativ]||'').trim():'',fam:ci.fam>=0?r[ci.fam]:'',mulh:ci.mulh>=0?r[ci.mulh]:'',jov:ci.jov>=0?r[ci.jov]:'',quil:ci.quil>=0?r[ci.quil]:'',valor:ci.valor>=0?r[ci.valor]:'',drep:ci.drep>=0?r[ci.drep]:'',vrep:ci.vrep>=0?r[ci.vrep]:''}); }
+  return it;
+}
+
+/* ============================================================
+   MONITORAMENTO — renderers
+   ============================================================ */
+function renderFinanceiro(){
+  const el=document.getElementById('tp-financeiro');
+  if(!fin||(!fin.comp.length&&!fin.total)){ el.innerHTML='<div class="loading">Sem dados do Financeiro.</div>'; return; }
+  const t=fin.total||{};
+  const espComp=(fin.comp.map(c=>c.pesp).find(v=>String(v||'').trim()!=='')||t.pesp);
+  const kpis=`<div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Disponível total</div><div class="kpi-value">US$ ${esc(txt(t.disp))} mi</div></div>
+    <div class="kpi"><div class="kpi-label">Comprometido</div><div class="kpi-value">US$ ${esc(txt(t.compr))} mi</div><div class="kpi-sub">${esc(txt(t.pcompr))} do disponível</div></div>
+    <div class="kpi"><div class="kpi-label">Executado acum.</div><div class="kpi-value" style="color:#3b6d11;">US$ ${esc(txt(t.exec))} mi</div><div class="kpi-sub">${esc(txt(t.pexec))} executado</div></div>
+    <div class="kpi"><div class="kpi-label">Esperado p/ tempo</div><div class="kpi-value">${esc(txt(espComp))}</div><div class="kpi-sub">ritmo nov/23–nov/29</div></div>
+  </div>`;
+  const cards=fin.comp.map(c=>{ const cl=statusClasse(c.status); const pe=pctBR(c.pexec); const psp=pctBR(c.pesp);
+    return `<div class="acordo-card ${statusNome(cl)}"><div class="acordo-top"><div class="acordo-titulo">${esc(c.nome)}</div>${statusPillMonit(c.status)}</div>
+      <div class="acordo-meta"><span>💰 Comprometido: US$ ${esc(txt(c.compr))} mi (${esc(txt(c.pcompr))})</span><span>✅ Executado: US$ ${esc(txt(c.exec))} mi</span><span>📅 Período: US$ ${esc(txt(c.per))} mi</span></div>
+      ${barW('Executado', pe, corStatus(cl), 'esperado '+esc(txt(c.pesp)))}</div>`;
+  }).join('');
+  let proj='';
+  if(fin.proj.anos.length){ const tot=fin.proj.anos.map((a,i)=>numBR(fin.proj.bid[i])+numBR(fin.proj.fida[i])); const mx=Math.max(...tot,1);
+    proj=`<div class="card"><p class="sec">Projeção de desembolsos — US$ mi (BID + FIDA)</p>${fin.proj.anos.map((a,i)=>{const v=tot[i];const w=(v/mx*100).toFixed(0);return `<div class="yr"><b>${esc(a)}</b><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:#2a78d6;"></div></div><span class="val">US$ ${v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})} mi</span></div>`;}).join('')}<div class="fonte" style="margin:8px 0 0;">BID + FIDA por ano</div></div>`;
+  }
+  el.innerHTML=kpis+`<div class="card"><p class="sec">Execução por componente</p>${cards||'<div class="loading">Sem componentes.</div>'}</div>`+proj+`<div class="fonte">Fonte: PSI_Monitoramento_Semanal · Financeiro</div>`;
+}
+function renderIndicadores(fRes='todos',fSt='todos'){
+  const el=document.getElementById('tp-indicadores');
+  if(!ind.length){ el.innerHTML='<div class="loading">Sem indicadores.</div>'; return; }
+  const cc=contarCores(ind,'status');
+  const kpis=`<div class="kpi-row"><div class="kpi"><div class="kpi-label">Indicadores</div><div class="kpi-value">${ind.length}</div></div><div class="kpi"><div class="kpi-label">Verde</div><div class="kpi-value" style="color:#3b6d11;">${cc.g}</div></div><div class="kpi"><div class="kpi-label">Amarelo</div><div class="kpi-value" style="color:#854f0b;">${cc.a}</div></div><div class="kpi"><div class="kpi-label">Vermelho</div><div class="kpi-value" style="color:#a32d2d;">${cc.r}</div></div></div>`;
+  const resList=[...new Set(ind.map(i=>i.res))];
+  let f=ind; if(fRes!=='todos')f=f.filter(i=>i.res===fRes); if(fSt!=='todos')f=f.filter(i=>statusClasse(i.status)===fSt);
+  const filtros=`<div class="filtros"><label>Resultado:</label><select onchange="renderIndicadores(this.value, document.getElementById('indst').value)"><option value="todos">Todos</option>${resList.map(r=>`<option value="${esc(r)}" ${fRes===r?'selected':''}>${esc(r)}</option>`).join('')}</select><label>Status:</label><select id="indst" onchange="renderIndicadores(document.querySelector('#tp-indicadores select').value, this.value)"><option value="todos">Todos</option><option value="g" ${fSt==='g'?'selected':''}>Verde</option><option value="a" ${fSt==='a'?'selected':''}>Amarelo</option><option value="r" ${fSt==='r'?'selected':''}>Vermelho</option></select><span style="font-size:12px;color:#888780;">${f.length} indicadores</span></div>`;
+  let html=''; let curRes=null;
+  f.forEach(i=>{ if(i.res!==curRes){curRes=i.res; html+=`<div class="miss-sep">Resultado ${esc(i.res)}</div>`;} const cl=statusClasse(i.status); const p=pctBR(i.prog);
+    html+=`<div class="acordo-card ${statusNome(cl)}"><div class="acordo-top"><div class="acordo-titulo">${i.cod?`<span style="color:#888780;font-size:11px;">${esc(i.cod)}</span> `:''}${esc(i.ind)}</div>${statusPillMonit(i.status)}</div><div class="acordo-meta"><span>📐 ${esc(txt(i.un))}</span><span>Base: ${esc(txt(i.base))}</span><span>Meta: ${esc(txt(i.meta))}</span><span>Realizado: ${esc(txt(i.real))}</span></div>${barW('Progresso', p, corStatus(cl))}${i.obs&&String(i.obs).trim()?`<div class="acordo-obs">💬 ${esc(i.obs)}</div>`:''}</div>`;
+  });
+  el.innerHTML=kpis+filtros+(html||'<div class="loading">Nenhum indicador com esse filtro.</div>')+`<div class="fonte">Fonte: PSI_Monitoramento_Semanal · Indicadores</div>`;
+}
+function renderProdutos(fSt='todos',fResp='todos'){
+  const el=document.getElementById('tp-produtos');
+  if(!prod.length){ el.innerHTML='<div class="loading">Sem produtos.</div>'; return; }
+  const cc=contarCores(prod,'status');
+  const kpis=`<div class="kpi-row"><div class="kpi"><div class="kpi-label">Produtos críticos</div><div class="kpi-value">${prod.length}</div></div><div class="kpi"><div class="kpi-label">Verde</div><div class="kpi-value" style="color:#3b6d11;">${cc.g}</div></div><div class="kpi"><div class="kpi-label">Amarelo</div><div class="kpi-value" style="color:#854f0b;">${cc.a}</div></div><div class="kpi"><div class="kpi-label">Vermelho</div><div class="kpi-value" style="color:#a32d2d;">${cc.r}</div></div></div>`;
+  const resps=[...new Set(prod.map(p=>String(p.resp||'').trim()).filter(Boolean))].sort();
+  let f=prod; if(fSt!=='todos')f=f.filter(p=>statusClasse(p.status)===fSt); if(fResp!=='todos')f=f.filter(p=>String(p.resp||'').trim()===fResp);
+  const filtros=`<div class="filtros"><label>Status:</label><select onchange="renderProdutos(this.value, document.getElementById('prresp').value)"><option value="todos">Todos</option><option value="g" ${fSt==='g'?'selected':''}>Verde</option><option value="a" ${fSt==='a'?'selected':''}>Amarelo</option><option value="r" ${fSt==='r'?'selected':''}>Vermelho</option></select><label>Responsável:</label><select id="prresp" onchange="renderProdutos(document.querySelector('#tp-produtos select').value, this.value)"><option value="todos">Todos</option>${resps.map(r=>`<option value="${esc(r)}" ${fResp===r?'selected':''}>${esc(r)}</option>`).join('')}</select><span style="font-size:12px;color:#888780;">${f.length} produtos</span></div>`;
+  const cards=f.map(p=>{const cl=statusClasse(p.status);const pp=pctBR(p.ppoa);return `<div class="acordo-card ${statusNome(cl)}"><div class="acordo-top"><div class="acordo-titulo">${p.num?`<span style="color:#888780;font-size:11px;">#${esc(p.num)}</span> `:''}${esc(p.produto)}</div>${statusPillMonit(p.status)}</div><div class="acordo-meta"><span>🏛 ${esc(txt(p.resp))}</span><span>Realizado: ${esc(txt(p.real))} / Meta POA ${esc(txt(p.mpoa))}</span>${p.data&&String(p.data).trim()?`<span>📅 ${esc(p.data)}</span>`:''}</div>${barW('% Meta POA', pp, corStatus(cl), 'esperado '+esc(txt(p.pesp)))}${p.obs&&String(p.obs).trim()?`<div class="acordo-obs">💬 ${esc(p.obs)}</div>`:''}</div>`;}).join('')||'<div class="loading">Nenhum produto com esse filtro.</div>';
+  el.innerHTML=kpis+filtros+cards+`<div class="fonte">Fonte: PSI_Monitoramento_Semanal · Produtos críticos</div>`;
+}
+function renderAquisicoes(){
+  const el=document.getElementById('tp-aquisicoes');
+  if(!aqui.length){ el.innerHTML='<div class="loading">Sem dados de Aquisições.</div>'; return; }
+  const totExec=aqui.reduce((s,a)=>s+numBR(a.exec),0);
+  const totPlan=aqui.reduce((s,a)=>s+numBR(a.plan),0);
+  const data=aqui.map(a=>String(a.data||'').trim()).filter(Boolean).pop()||'—';
+  const kpis=`<div class="kpi-row"><div class="kpi"><div class="kpi-label">Contratos em execução</div><div class="kpi-value">${fmtR$(totExec)}</div></div><div class="kpi"><div class="kpi-label">Planejado (ago–dez/26)</div><div class="kpi-value">${fmtR$(totPlan)}</div></div><div class="kpi"><div class="kpi-label">Categorias</div><div class="kpi-value">${aqui.length}</div></div><div class="kpi"><div class="kpi-label">Última atualização</div><div class="kpi-value" style="font-size:15px;">${esc(data)}</div></div></div>`;
+  const mx=Math.max(...aqui.map(a=>numBR(a.exec)),1);
+  const cards=aqui.map(a=>{const v=numBR(a.exec);const w=(v/mx*100).toFixed(0);return `<div class="acordo-card"><div class="acordo-top"><div class="acordo-titulo">${esc(a.cat)}</div><span class="pill pill-b">${fmtR$(v)}</span></div><div class="acordo-meta"><span>Planejado ago–dez/26: ${fmtR$(numBR(a.plan))}</span></div><div class="barw"><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:#2a78d6;"></div></div></div></div>`;}).join('');
+  el.innerHTML=kpis+`<div class="card"><p class="sec">Por categoria de gasto</p>${cards}</div><div class="fonte">Fonte: PSI_Monitoramento_Semanal · Aquisições</div>`;
+}
+function renderPAP(fLote='todos',fAtiv='todos'){
+  const el=document.getElementById('tp-pap');
+  if(!pap.length){ el.innerHTML='<div class="loading">Sem dados do Perfil PAP.</div>'; return; }
+  const sum=(k)=>pap.reduce((s,x)=>s+numBR(x[k]),0);
+  const municipios=new Set(pap.map(x=>x.mun).filter(Boolean)).size;
+  const lotes=[...new Set(pap.map(x=>x.lote).filter(Boolean))].sort();
+  const ativs=[...new Set(pap.map(x=>x.ativ).filter(Boolean))].sort();
+  const kpis=`<div class="kpi-row"><div class="kpi"><div class="kpi-label">Famílias beneficiárias</div><div class="kpi-value">${fmtInt(sum('fam'))}</div><div class="kpi-sub">${municipios} municípios · ${lotes.length} lotes</div></div><div class="kpi"><div class="kpi-label">Mulheres</div><div class="kpi-value">${fmtInt(sum('mulh'))}</div></div><div class="kpi"><div class="kpi-label">Jovens</div><div class="kpi-value">${fmtInt(sum('jov'))}</div></div><div class="kpi"><div class="kpi-label">Quilombolas</div><div class="kpi-value">${fmtInt(sum('quil'))}</div></div><div class="kpi"><div class="kpi-label">Valor estimado total</div><div class="kpi-value" style="font-size:16px;">${fmtR$(sum('valor'))}</div></div></div>`;
+  let f=pap; if(fLote!=='todos')f=f.filter(x=>x.lote===fLote); if(fAtiv!=='todos')f=f.filter(x=>x.ativ===fAtiv);
+  const filtros=`<div class="filtros"><label>Lote:</label><select onchange="renderPAP(this.value, document.getElementById('papativ').value)"><option value="todos">Todos</option>${lotes.map(l=>`<option value="${esc(l)}" ${fLote===l?'selected':''}>Lote ${esc(l)}</option>`).join('')}</select><label>Atividade:</label><select id="papativ" onchange="renderPAP(document.querySelector('#tp-pap select').value, this.value)"><option value="todos">Todas</option>${ativs.map(a=>`<option value="${esc(a)}" ${fAtiv===a?'selected':''}>${esc(a)}</option>`).join('')}</select><span style="font-size:12px;color:#888780;">${f.length} registros</span></div>`;
+  const cards=f.map(x=>`<div class="acordo-card"><div class="acordo-top"><div class="acordo-titulo">${esc(x.mun)}${x.ativ?` · ${esc(x.ativ)}`:''}</div>${x.lote?`<span class="pill pill-b">Lote ${esc(x.lote)}</span>`:''}</div><div class="acordo-meta"><span>👨‍👩‍👧 ${esc(txt(x.fam))} famílias</span><span>♀ ${esc(txt(x.mulh))}</span><span>🧑 ${esc(txt(x.jov))} jovens</span>${numBR(x.quil)?`<span>🪘 ${esc(txt(x.quil))} quilombolas</span>`:''}<span>💵 ${x.valor&&String(x.valor).trim()?fmtR$(numBR(x.valor)):'—'}</span>${x.drep&&String(x.drep).trim()?`<span>📅 repasse: ${esc(x.drep)}</span>`:''}</div></div>`).join('')||'<div class="loading">Nenhum registro com esse filtro.</div>';
+  el.innerHTML=kpis+filtros+cards+`<div class="fonte">Fonte: PSI_Monitoramento_Semanal · Perfil PAP</div>`;
+}
+
+/* ============================================================
+   VISÃO GERAL consolidada
+   ============================================================ */
+function renderVisaoGeral(){
+  const el=document.getElementById('tp-geral');
+  const t=(fin&&fin.total)||{};
+  const ccI=contarCores(ind,'status'), ccP=contarCores(prod,'status');
+  const acAll=[...dadosAcordos.m25,...dadosAcordos.m26,...dadosAcordos.rc,...(dadosAcordos.ucp.itens||[])];
+  const ctA=contarStatus(acAll);
+  const famTot=pap.reduce((s,x)=>s+numBR(x.fam),0);
+  const valTot=pap.reduce((s,x)=>s+numBR(x.valor),0);
+  const execPctTotal=(numBR(t.disp)>0)?(numBR(t.exec)/numBR(t.disp)*100):null;
+  const kpis=`<div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Executado acum.</div><div class="kpi-value" style="color:#3b6d11;">${execPctTotal==null?esc(txt(t.pexec)):execPctTotal.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%'}</div><div class="kpi-sub">US$ ${esc(txt(t.exec))} mi de ${esc(txt(t.disp))} (total do projeto)</div></div>
+    <div class="kpi"><div class="kpi-label">Comprometido</div><div class="kpi-value">${esc(txt(t.pcompr))}</div><div class="kpi-sub">US$ ${esc(txt(t.compr))} mi (total do projeto)</div></div>
+    <div class="kpi"><div class="kpi-label">Indicadores 🟢</div><div class="kpi-value">${ccI.g}/${ind.length||0}</div><div class="kpi-sub">no verde</div></div>
+    <div class="kpi"><div class="kpi-label">Acordos</div><div class="kpi-value">${acAll.length}</div><div class="kpi-sub">${ctA.concluido} concluídos</div></div>
+    <div class="kpi"><div class="kpi-label">Famílias PAP</div><div class="kpi-value">${fmtInt(famTot)}</div><div class="kpi-sub">${fmtR$(valTot)}</div></div>
+  </div>`;
+  const grid=`<div class="grid2">
+    <div class="card"><p class="sec">Indicadores (Teoria da Mudança)</p>${ind.length?barrasCores(ccI):'<div class="loading">—</div>'}</div>
+    <div class="card"><p class="sec">Produtos críticos</p>${prod.length?barrasCores(ccP):'<div class="loading">—</div>'}</div>
+    <div class="card"><p class="sec">Acordos BID/FIDA</p>${acAll.length?barrasStatus(ctA,acAll.length):'<div class="loading">—</div>'}</div>
+    <div class="card"><p class="sec">Execução financeira</p>${fin&&fin.comp.length?fin.comp.map(c=>{const cl=statusClasse(c.status);return barW(esc(c.nome.split('–')[0].trim()||c.nome), pctBR(c.pexec), corStatus(cl));}).join(''):'<div class="loading">—</div>'}</div>
+  </div>`;
+  el.innerHTML=kpis+grid+`<div class="fonte">Consolidado · PSI_Monitoramento_Semanal + Acordos BID/FIDA</div>`;
+}
+
+/* ============================================================
+   CARREGAMENTO
+   ============================================================ */
+async function carregarAcordos(){
+  const r=await fetch(ACORDOS_API); if(!r.ok) throw new Error(`Acordos: HTTP ${r.status}`);
+  const d=await r.json();
+  dadosAcordos.m25=parseMissao25(d['ACORDOS MISSÃO 2025']||[]);
+  dadosAcordos.m26=parseMissao26(d['ACORDOS MISSÃO 2026']||[]);
+  dadosAcordos.rc=parseCarteira(d['ACORDOS REVISÃO DE CARTEIRA']||[]);
+  dadosAcordos.ucp=parseGenerico(d['ACORDOS REUNIÕES UCP 2026']||[]);
+  renderAcordosGeral(); renderAcordos25(); renderAcordos26(); renderCarteira(); renderUCP();
+}
+function acharAba(d, nomes){ for(const n of nomes){ if(d[n]) return d[n]; } const chave=Object.keys(d).find(k=>nomes.some(n=>k.toUpperCase().replace(/[\s_]/g,'')===n.toUpperCase().replace(/[\s_]/g,''))); return chave?d[chave]:[]; }
+async function carregarMonitoramento(){
+  const r=await fetch(MONITORAMENTO_API); if(!r.ok) throw new Error(`Monitoramento: HTTP ${r.status}`);
+  const d=await r.json();
+  fin=parseFinanceiro(acharAba(d,['FINANCEIRO']));
+  ind=parseIndicadores(acharAba(d,['INDICADORES']));
+  prod=parseProdutos(acharAba(d,['PRODUTOS_CRÍTICOS','PRODUTOS CRÍTICOS','PRODUTOS_CRITICOS']));
+  aqui=parseAquisicoes(acharAba(d,['AQUISIÇÕES','AQUISICOES']));
+  pap=parsePAP(acharAba(d,['Perfil PAP','PERFIL PAP','PAP']));
+  renderFinanceiro(); renderIndicadores(); renderProdutos(); renderAquisicoes(); renderPAP();
+}
+async function carregarTudo(){
+  document.getElementById('sync-label').textContent='⏳ Carregando dados...';
+  ['tp-geral','tp-financeiro','tp-indicadores','tp-produtos','tp-aquisicoes','tp-pap'].forEach(id=>{document.getElementById(id).innerHTML='<div class="loading">Carregando...</div>';});
+  ['sp-ageral','sp-missao25','sp-missao26','sp-carteira','sp-ucp'].forEach(id=>{document.getElementById(id).innerHTML='<div class="loading">Carregando...</div>';});
+  const res=await Promise.allSettled([carregarAcordos(), carregarMonitoramento()]);
+  const [ac,mo]=res;
+  if(ac.status==='rejected'){ ['sp-ageral','sp-missao25','sp-missao26','sp-carteira','sp-ucp'].forEach(id=>{document.getElementById(id).innerHTML=`<div class="err">Não foi possível carregar os acordos.<br><br>${esc(ac.reason&&ac.reason.message)}</div>`;}); }
+  if(mo.status==='rejected'){ ['tp-financeiro','tp-indicadores','tp-produtos','tp-aquisicoes','tp-pap'].forEach(id=>{document.getElementById(id).innerHTML=`<div class="err">Não foi possível carregar o monitoramento.<br><br>${esc(mo.reason&&mo.reason.message)}</div>`;}); }
+  renderVisaoGeral();
+  const now=new Date();
+  document.getElementById('sync-label').innerHTML = (ac.status==='fulfilled'||mo.status==='fulfilled')
+    ? `✅ Sincronizado às ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')} de ${now.toLocaleDateString('pt-BR')}`
+    : `❌ Erro na sincronização`;
+}
+carregarTudo();
+</script>
+</body>
+</html>
