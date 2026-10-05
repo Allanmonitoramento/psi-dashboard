@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSI — Painel de Monitoramento</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --border: #e2e5ea;
+  --text: #0f1923;
+  --muted: #6b7585;
+  --subtle: #9aa3b0;
+  --accent: #1352a2;
+  --accent-light: #e8eef8;
+  --green: #0e7c4a;
+  --green-bg: #e6f4ee;
+  --yellow: #9a5d00;
+  --yellow-bg: #fef3db;
+  --red: #b5181b;
+  --red-bg: #fdeaea;
+  --blue-bar: #1352a2;
+  --green-bar: #0e7c4a;
+  --yellow-bar: #d49000;
+  --red-bar: #e03c3f;
+  --radius: 10px;
+  --shadow: 0 1px 4px rgba(0,0,0,.07);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ── LAYOUT ── */
+.app { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  background: #0c1e35;
+  color: #c8d4e3;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 100;
+}
+
+.sidebar-logo {
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.sidebar-logo .proj-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: .01em;
+}
+
+.sidebar-logo .proj-sub {
+  font-size: 11px;
+  color: #7a93b5;
+  margin-top: 2px;
+}
+
+.sidebar-logo .badge-bid {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(19,82,162,.5);
+  color: #94b8e8;
+  padding: 2px 7px;
+  border-radius: 4px;
+  margin-top: 6px;
+}
+
+.nav-section {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: #4a6280;
+  padding: 14px 18px 5px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 18px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #8aa4c2;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  border-left: 3px solid transparent;
+  transition: background .15s, color .15s;
+}
+
+.nav-item:hover { background: rgba(255,255,255,.05); color: #d0dcea; }
+
+.nav-item.active {
+  background: rgba(19,82,162,.25);
+  color: #fff;
+  border-left-color: #4b8ef0;
+  font-weight: 600;
+}
+
+.nav-icon { font-size: 15px; width: 20px; text-align: center; }
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 14px 18px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  font-size: 11px;
+  color: #4a6280;
+}
+
+.main {
+  margin-left: 220px;
+  flex: 1;
+  padding: 24px 28px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.page-title { font-size: 18px; font-weight: 700; color: var(--text); }
+.page-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.btn-refresh {
+  font-size: 12px; font-weight: 500; font-family: inherit;
+  padding: 7px 14px; border: 1px solid var(--border);
+  border-radius: 7px; background: var(--surface); cursor: pointer; color: var(--text);
+  display: flex; align-items: center; gap: 5px;
+}
+.btn-refresh:hover { background: #f5f7fa; }
+
+.sync-bar {
+  font-size: 11px; color: var(--muted);
+  padding: 6px 12px; background: var(--surface);
+  border-radius: 6px; border: 1px solid var(--border);
+  margin-bottom: 18px;
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* ── PANELS ── */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── KPI ROW ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+
+.kpi-label { font-size: 11px; color: var(--muted); font-weight: 500; margin-bottom: 5px; }
+.kpi-value { font-size: 22px; font-weight: 700; line-height: 1; color: var(--text); }
+.kpi-sub { font-size: 11px; color: var(--subtle); margin-top: 4px; }
+
+.kpi-card.kpi-green .kpi-value { color: var(--green); }
+.kpi-card.kpi-yellow .kpi-value { color: var(--yellow); }
+.kpi-card.kpi-red .kpi-value { color: var(--red); }
+.kpi-card.kpi-blue .kpi-value { color: var(--accent); }
+
+/* ── SECTION CARD ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+}
+
+.card-title {
+  font-size: 12px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .05em;
+  margin-bottom: 14px;
+}
+
+/* ── TABLE ── */
+.tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tbl th { text-align: left; padding: 8px 10px; color: var(--muted); font-weight: 600; font-size: 11px; border-bottom: 2px solid var(--border); background: #f8f9fb; }
+.tbl td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tr.total-row td { font-weight: 700; background: #f2f5fb; }
+.tbl tr:hover td { background: #f8f9fb; }
+.tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── PROGRESS BAR ── */
+.prog-wrap { width: 100%; height: 5px; background: #eaedf2; border-radius: 3px; overflow: hidden; min-width: 60px; }
+.prog-fill { height: 100%; border-radius: 3px; transition: width .3s; }
+
+/* ── PILLS ── */
+.pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 600; padding: 2px 8px;
+  border-radius: 20px; white-space: nowrap;
+}
+.pill-green { background: var(--green-bg); color: var(--green); }
+.pill-yellow { background: var(--yellow-bg); color: var(--yellow); }
+.pill-red { background: var(--red-bg); color: var(--red); }
+.pill-grey { background: #eaedf2; color: var(--muted); }
+.pill-blue { background: var(--accent-light); color: var(--accent); }
+
+/* ── DOT ── */
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.dot-green { background: var(--green); }
+.dot-yellow { background: #d49000; }
+.dot-red { background: var(--red-bar); }
+.dot-grey { background: var(--subtle); }
+.dot-blue { background: var(--accent); }
+
+/* ── INDICATOR ROWS ── */
+.ind-header {
+  display: grid;
+  grid-template-columns: 2.5fr 1fr 1fr 1.2fr 80px;
+  gap: 8px; padding: 6px 0;
+  font-size: 10px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .05em;
+  border-bottom: 2px solid var(--border); margin-bottom: 2px;
+}
+
+.ind-row {
+  display: grid;
+  grid-template-columns: 2.5fr 1fr 1fr 1.2fr 80px;
+  gap: 8px; padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: center; font-size: 12px;
+}
+.ind-row:last-child { border-bottom: none; }
+
+/* ── PRODUCT CARDS ── */
+.prod-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px;
+  margin-bottom: 10px; box-shadow: var(--shadow);
+}
+
+.prod-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+.prod-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.4; }
+.prod-comp { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.bar-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+
+/* ── ACORDOS ── */
+.acord-filters {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.filter-btn {
+  font-size: 11px; font-weight: 500; padding: 5px 12px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); cursor: pointer; font-family: inherit; color: var(--muted);
+}
+.filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.acord-table .tbl td { font-size: 11.5px; }
+.acord-activity { max-width: 420px; }
+
+/* ── VISAO GERAL ── */
+.vg-section-title {
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .06em;
+  margin: 0 0 10px;
+}
+
+.mini-list { display: flex; flex-direction: column; gap: 8px; }
+.mini-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px solid var(--border); gap: 8px;
+}
+.mini-item:last-child { border-bottom: none; }
+.mini-name { font-size: 12px; color: var(--text); flex: 1; }
+.mini-val { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; }
+
+/* ── FINANCEIRO ── */
+.fin-section { margin-bottom: 10px; }
+.fin-org {
+  font-size: 12px; font-weight: 700; color: var(--accent);
+  background: var(--accent-light); padding: 6px 10px;
+  border-radius: 6px; margin-bottom: 2px;
+}
+
+/* ── PAP ── */
+.pap-empty {
+  text-align: center; padding: 48px 20px; color: var(--muted); font-size: 13px;
+}
+.pap-empty .pap-icon { font-size: 36px; margin-bottom: 12px; }
+
+/* ── CHART ── */
+.chart-wrap { position: relative; width: 100%; }
+
+/* ── LOADING / ERROR ── */
+.state-box {
+  text-align: center; padding: 40px 20px;
+  background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--border); color: var(--muted); font-size: 13px;
+}
+.state-box.error { background: var(--red-bg); color: var(--red); border-color: #f5b8b8; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; padding: 14px; }
+  .ind-header, .ind-row { grid-template-columns: 2fr 1fr 80px; }
+  .ind-header > *:nth-child(2), .ind-header > *:nth-child(3),
+  .ind-row > *:nth-child(2), .ind-row > *:nth-child(3) { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="proj-name">PSI — Painel M&A</div>
+    <div class="proj-sub">Piauí Sustentável e Inclusivo</div>
+    <span class="badge-bid">BR-L1542 · BID/FIDA</span>
+  </div>
+
+  <div class="nav-section">Monitoramento</div>
+  <button class="nav-item active" onclick="irPara('visao',this)"><span class="nav-icon">🏠</span> Visão geral</button>
+  <button class="nav-item" onclick="irPara('fin',this)"><span class="nav-icon">📊</span> Financeiro</button>
+  <button class="nav-item" onclick="irPara('ind',this)"><span class="nav-icon">✅</span> Indicadores</button>
+  <button class="nav-item" onclick="irPara('prod',this)"><span class="nav-icon">📦</span> Produtos críticos</button>
+  <button class="nav-item" onclick="irPara('aquis',this)"><span class="nav-icon">🛒</span> Aquisições</button>
+
+  <div class="nav-section">Execução</div>
+  <button class="nav-item" onclick="irPara('orcamento',this)"><span class="nav-icon">🏛️</span> Orçamento Órgão</button>
+  <button class="nav-item" onclick="irPara('cisternas',this)"><span class="nav-icon">💧</span> Entrega de Cisternas</button>
+
+  <div class="nav-section">Governança</div>
+  <button class="nav-item" onclick="irPara('pap',this)"><span class="nav-icon">👥</span> Perfil PAP</button>
+  <button class="nav-item" onclick="irPara('acordos',this)"><span class="nav-icon">📋</span> Acordos</button>
+
+  <div class="sidebar-footer">
+    <div id="sidebar-sync">⏳ Carregando...</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <div class="page-header">
+    <div>
+      <div class="page-title" id="page-title">Visão Geral</div>
+      <div class="page-sub">BR-L1542 · Piauí Sustentável e Inclusivo · Execução, indicadores e acordos BID/FIDA</div>
+    </div>
+    <div class="header-actions">
+      <span class="pill pill-blue">Monitoramento &amp; Avaliação</span>
+      <button class="btn-refresh" onclick="carregarTudo()">↻ Atualizar</button>
+    </div>
+  </div>
+
+  <div class="sync-bar" id="sync-bar">⏳ Carregando dados...</div>
+
+  <!-- VISÃO GERAL -->
+  <div id="panel-visao" class="panel active">
+    <div class="state-box" id="vg-content">Carregando...</div>
+  </div>
+
+  <!-- FINANCEIRO -->
+  <div id="panel-fin" class="panel">
+    <div class="state-box" id="fin-content">Carregando...</div>
+  </div>
+
+  <!-- INDICADORES -->
+  <div id="panel-ind" class="panel">
+    <div class="state-box" id="ind-content">Carregando...</div>
+  </div>
+
+  <!-- PRODUTOS CRÍTICOS -->
+  <div id="panel-prod" class="panel">
+    <div class="state-box" id="prod-content">Carregando...</div>
+  </div>
+
+  <!-- AQUISIÇÕES -->
+  <div id="panel-aquis" class="panel">
+    <div class="state-box" id="aquis-content">Carregando...</div>
+  </div>
+
+  <!-- ORÇAMENTO ORGÃO -->
+  <div id="panel-orcamento" class="panel">
+    <div class="state-box" id="orcamento-content">Carregando...</div>
+  </div>
+
+  <!-- ENTREGA DE CISTERNAS -->
+  <div id="panel-cisternas" class="panel">
+    <div class="state-box" id="cisternas-content">Carregando...</div>
+  </div>
+
+  <!-- PERFIL PAP -->
+  <div id="panel-pap" class="panel">
+    <div class="state-box" id="pap-content">Carregando...</div>
+  </div>
+
+  <!-- ACORDOS -->
+  <div id="panel-acordos" class="panel">
+    <div class="state-box" id="acordos-content">Carregando...</div>
+  </div>
+
+</main>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════
+   CONFIGURAÇÃO
+══════════════════════════════════════════════════ */
+const API_PSI = 'https://script.google.com/macros/s/AKfycbyYv7Lcjlq6i9tqKgvBfJp5p9SmBYjEN0v4gI4j-P_vUeHOYdWHR2MvyU0biOZPM5a5rQ/exec';
+
+// Cache de acordos (preenchido pela API)
+let ACORDOS_DATA = [];
+
+// Dados Financeiros embutidos (Despesas Pagas por Fonte de Financiamento - corte 30/09/2026)
+const FIN_DATA = {
+  corte: "30/09/2026",
+  secretarias: [
+    {
+      nome: "150101 — SECRETARIA DA AGRICULTURA FAMILIAR",
+      total2024: 3616601.39, total2025: 9105419.20, total2026: 22010699.22, totalPago: 34732719.81,
+      fontes: [
+        {nome:"BID", v2024:3152637.62, v2025:7405944.86, v2026:19053766.43, total:29612348.91},
+        {nome:"Contrapartida BID", v2024:463963.77, v2025:1494884.34, v2026:452582.09, total:2411430.20},
+        {nome:"FIDA", v2024:0, v2025:204590.00, v2026:2504350.70, total:2708940.70}
+      ]
+    },
+    {
+      nome: "150201 — INSTITUTO DE TERRAS DO PIAUÍ",
+      total2024: 205919.01, total2025: 5881012.19, total2026: 2193526.95, totalPago: 8280458.15,
+      fontes: [
+        {nome:"BID", v2024:205919.01, v2025:5488012.19, v2026:2193526.95, total:7887458.15},
+        {nome:"Contrapartida BID", v2024:0, v2025:393000.00, v2026:0, total:393000.00}
+      ]
+    },
+    {
+      nome: "190101 — SECRETARIA DE PLANEJAMENTO",
+      total2024: 885961.20, total2025: 5351905.22, total2026: 6709634.48, totalPago: 12947500.90,
+      fontes: [
+        {nome:"BID", v2024:869321.20, v2025:4501283.60, v2026:6709634.48, total:12080239.28},
+        {nome:"Contrapartida BID", v2024:16640.00, v2025:850621.62, v2026:0, total:867261.62}
+      ]
+    },
+    {
+      nome: "280101 — SECRETARIA DO MEIO AMBIENTE E RECURSOS HÍDRICOS",
+      total2024: 512977.99, total2025: 4736355.30, total2026: 2520557.42, totalPago: 7769890.71,
+      fontes: [
+        {nome:"BID", v2024:0, v2025:2996535.32, v2026:2477372.89, total:5473908.21},
+        {nome:"Contrapartida BID", v2024:0, v2025:30800.00, v2026:0, total:30800.00},
+        {nome:"Contrapartida FIDA", v2024:0, v2025:0, v2026:27200.00, total:27200.00},
+        {nome:"FIDA", v2024:512977.99, v2025:1709019.98, v2026:15984.53, total:2237982.50}
+      ]
+    },
+    {
+      nome: "540101 — SECRETARIA DE ASSISTÊNCIA TÉCNICA E DEFESA AGROPECUÁRIA",
+      total2024: 8960.00, total2025: 0, total2026: 42320.00, totalPago: 51280.00,
+      fontes: [
+        {nome:"Contrapartida BID", v2024:8960.00, v2025:0, v2026:42320.00, total:51280.00}
+      ]
+    }
+  ],
+  totalGeral: {v2024:5230419.59, v2025:25074691.91, v2026:33476738.07, total:63781849.57}
+};
+
+/* ══════════════════════════════════════════════════
+   UTILITÁRIOS
+══════════════════════════════════════════════════ */
+function brl(v) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function pct(v, dec=1) { return (v*100).toFixed(dec) + '%'; }
+function num(s) {
+  if (s === null || s === undefined || s === '') return null;
+  const n = parseFloat(String(s).replace(',','.').replace(/[^\d.\-]/g,''));
+  return isNaN(n) ? null : n;
+}
+function percEsperado() {
+  const ini = new Date(2023,10,1);
+  const hoje = new Date();
+  const m = (hoje.getFullYear()-ini.getFullYear())*12 + (hoje.getMonth()-ini.getMonth());
+  return Math.min(m/72, 1);
+}
+function statusCls(real, esp) {
+  if (real === null) return 'grey';
+  if (real >= esp*0.9) return 'green';
+  if (real >= esp*0.7) return 'yellow';
+  return 'red';
+}
+function pillAcord(s) {
+  const m = {
+    'Concluído': ['pill-green','✓'],
+    'Em andamento': ['pill-yellow','↺'],
+    'Em atraso': ['pill-red','!'],
+    'Não iniciado': ['pill-grey','○']
+  };
+  return m[s] || ['pill-grey','?'];
+}
+
+let chartFin = null;
+
+/* ══════════════════════════════════════════════════
+   NAVEGAÇÃO
+══════════════════════════════════════════════════ */
+const TITLES = {visao:'Visão Geral',fin:'Financeiro',ind:'Indicadores',prod:'Produtos Críticos',aquis:'Aquisições',orcamento:'Orçamento Órgão',cisternas:'Entrega de Cisternas',pap:'Perfil PAP',acordos:'Acordos'};
+function irPara(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  document.getElementById('page-title').textContent = TITLES[id] || id;
+}
+
+/* ══════════════════════════════════════════════════
+   RENDERIZAÇÕES
+══════════════════════════════════════════════════ */
+
+// ── FINANCEIRO (dados embutidos) ──
+function renderFin() {
+  const esp = percEsperado();
+  const d = FIN_DATA;
+
+  const totalExec = d.totalGeral.v2024 + d.totalGeral.v2025 + d.totalGeral.v2026;
+  const totalContr = 63781849.57; // total do projeto referência
+
+  const tabelaHTML = d.secretarias.map(s => {
+    const subtotal = s.total2024 + s.total2025 + s.total2026;
+    const pExec = totalContr > 0 ? subtotal/totalContr : 0;
+    const sc = statusCls(pExec, esp);
+    const barC = {green:'var(--green-bar)',yellow:'var(--yellow-bar)',red:'var(--red-bar)',grey:'#ccc'}[sc];
+    const pillC = {green:'pill-green',yellow:'pill-yellow',red:'pill-red',grey:'pill-grey'}[sc];
+
+    const subRows = s.fontes.map(f => `
+      <tr>
+        <td style="padding-left:24px;color:var(--muted);">${f.nome}</td>
+        <td class="num">${brl(f.v2024)}</td>
+        <td class="num">${brl(f.v2025)}</td>
+        <td class="num">${brl(f.v2026)}</td>
+        <td class="num" style="font-weight:600">${brl(f.total)}</td>
+        <td></td><td></td>
+      </tr>`).join('');
+
+    return `
+      <tr style="background:#f5f7fb;">
+        <td style="font-weight:700;color:var(--accent);">${s.nome}</td>
+        <td class="num" style="font-weight:600">${brl(s.total2024)}</td>
+        <td class="num" style="font-weight:600">${brl(s.total2025)}</td>
+        <td class="num" style="font-weight:600">${brl(s.total2026)}</td>
+        <td class="num" style="font-weight:700">${brl(s.totalPago)}</td>
+        <td style="min-width:80px">
+          <div class="prog-wrap"><div class="prog-fill" style="width:${Math.min(pExec*100,100).toFixed(0)}%;background:${barC}"></div></div>
+        </td>
+        <td><span class="pill ${pillC}">${pct(pExec)}</span></td>
+      </tr>
+      ${subRows}`;
+  }).join('');
+
+  document.getElementById('fin-content').outerHTML = `
+  <div id="fin-content">
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Total pago 2024</div><div class="kpi-value" style="font-size:16px">${brl(d.totalGeral.v2024)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Total pago 2025</div><div class="kpi-value" style="font-size:16px">${brl(d.totalGeral.v2025)}</div></div>
+      <div class="kpi-card kpi-blue"><div class="kpi-label">Total pago 2026</div><div class="kpi-value" style="font-size:16px">${brl(d.totalGeral.v2026)}</div></div>
+      <div class="kpi-card kpi-green"><div class="kpi-label">Total geral pago</div><div class="kpi-value" style="font-size:16px">${brl(d.totalGeral.total)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Corte de dados</div><div class="kpi-value" style="font-size:16px">30/09/26</div><div class="kpi-sub">Data base</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Despesas pagas por fonte de financiamento — R$</div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr>
+            <th>Secretaria / Fonte</th>
+            <th class="num">2024</th>
+            <th class="num">2025</th>
+            <th class="num">2026</th>
+            <th class="num">Total Pago</th>
+            <th>Progresso</th>
+            <th>% do Total</th>
+          </tr></thead>
+          <tbody>
+            ${tabelaHTML}
+            <tr class="total-row">
+              <td>Total Geral</td>
+              <td class="num">${brl(d.totalGeral.v2024)}</td>
+              <td class="num">${brl(d.totalGeral.v2025)}</td>
+              <td class="num">${brl(d.totalGeral.v2026)}</td>
+              <td class="num">${brl(d.totalGeral.total)}</td>
+              <td></td>
+              <td><span class="pill pill-blue">100%</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Distribuição por secretaria — Total Pago (R$)</div>
+      <div class="chart-wrap" style="height:240px">
+        <canvas id="chart-fin"></canvas>
+      </div>
+    </div>
+  </div>`;
+
+  if (chartFin) { chartFin.destroy(); chartFin = null; }
+  const labels = FIN_DATA.secretarias.map(s => s.nome.split('—')[0].trim());
+  const vals   = FIN_DATA.secretarias.map(s => s.totalPago);
+  const colors = ['#1352a2','#0e7c4a','#d49000','#e03c3f','#6b7585'];
+  chartFin = new Chart(document.getElementById('chart-fin'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: vals, backgroundColor: colors, borderRadius: 5, borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#6b7585', font: { size: 10 } } },
+        y: { grid: { color: '#eaedf2' }, ticks: { color: '#6b7585', font: { size: 10 }, callback: v => 'R$' + (v/1e6).toFixed(1) + 'mi' } }
+      }
+    }
+  });
+}
+
+// ── ACORDOS (via API) ──
+let filtroAtivo = 'Todos';
+
+function parseAcordosRows(rows) {
+  if (!rows || rows.length < 3) return [];
+  // Linha 0 = título, linha 1 = cabeçalho (NÍVEL, Atividade, Responsável, Prazo, Status, Evidências)
+  return rows.slice(2).filter(r => r[0] && String(r[0]).trim() && String(r[1]).trim()).map(r => ({
+    nivel:     String(r[0]||'').trim(),
+    atividade: String(r[1]||'').trim(),
+    resp:      String(r[2]||'').trim(),
+    prazo:     String(r[3]||'').trim(),
+    status:    String(r[4]||'').trim(),
+    evidencia: String(r[5]||'').trim()
+  }));
+}
+
+function renderAcordos(filtro) {
+  filtroAtivo = filtro || 'Todos';
+  if (ACORDOS_DATA.length === 0) {
+    document.getElementById('acordos-content').outerHTML =
+      '<div id="acordos-content" class="state-box">⏳ Carregando acordos da API...</div>';
+    return;
+  }
+  const niveis = ['Todos','Reunião controle','Matriz de riscos','Carteira FIDA','RR5'];
+  const stats = {total:0,concluido:0,andamento:0,atraso:0,naoIniciado:0};
+  ACORDOS_DATA.forEach(a => {
+    stats.total++;
+    if(a.status==='Concluído') stats.concluido++;
+    else if(a.status==='Em andamento') stats.andamento++;
+    else if(a.status==='Em atraso') stats.atraso++;
+    else stats.naoIniciado++;
+  });
+
+  const dados = filtroAtivo === 'Todos' ? ACORDOS_DATA : ACORDOS_DATA.filter(a => a.nivel === filtroAtivo);
+
+  const rows = dados.map((a,i) => {
+    const [cls,ic] = pillAcord(a.status);
+    return `<tr>
+      <td>${i+1}</td>
+      <td><span class="pill pill-blue" style="font-size:9px">${a.nivel}</span></td>
+      <td class="acord-activity">${a.atividade}</td>
+      <td>${a.resp || '—'}</td>
+      <td>${a.prazo || '—'}</td>
+      <td><span class="pill ${cls}">${ic} ${a.status}</span></td>
+      <td style="font-size:11px;color:var(--muted);max-width:200px">${a.evidencia || '—'}</td>
+    </tr>`;
+  }).join('');
+
+  const filterBtns = niveis.map(n =>
+    `<button class="filter-btn ${filtroAtivo===n?'active':''}" onclick="renderAcordos('${n}')">${n}</button>`
+  ).join('');
+
+  document.getElementById('acordos-content').outerHTML = `
+  <div id="acordos-content">
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Total de acordos</div><div class="kpi-value">${stats.total}</div></div>
+      <div class="kpi-card kpi-green"><div class="kpi-label">Concluídos</div><div class="kpi-value">${stats.concluido}</div><div class="kpi-sub">${pct(stats.concluido/stats.total)}</div></div>
+      <div class="kpi-card kpi-yellow"><div class="kpi-label">Em andamento</div><div class="kpi-value">${stats.andamento}</div><div class="kpi-sub">${pct(stats.andamento/stats.total)}</div></div>
+      <div class="kpi-card kpi-red"><div class="kpi-label">Em atraso</div><div class="kpi-value">${stats.atraso}</div><div class="kpi-sub">${pct(stats.atraso/stats.total)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Não iniciados</div><div class="kpi-value">${stats.naoIniciado}</div><div class="kpi-sub">${pct(stats.naoIniciado/stats.total)}</div></div>
+    </div>
+
+    <div class="card acord-table">
+      <div class="card-title">Acordos — ${filtroAtivo} (${dados.length} registros)</div>
+      <div class="acord-filters">${filterBtns}</div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr>
+            <th style="width:32px">#</th>
+            <th>Nível</th>
+            <th>Atividade</th>
+            <th>Responsável</th>
+            <th>Prazo</th>
+            <th>Status</th>
+            <th>Evidências</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── VISÃO GERAL ──
+function renderVisaoGeral(dados) {
+  const esp = percEsperado();
+
+  // Acordos stats
+  const acStats = {total:ACORDOS_DATA.length, conc:0, and:0, atr:0, ni:0};
+  ACORDOS_DATA.forEach(a => {
+    if(a.status==='Concluído') acStats.conc++;
+    else if(a.status==='Em andamento') acStats.and++;
+    else if(a.status==='Em atraso') acStats.atr++;
+    else acStats.ni++;
+  });
+
+  // Indicadores stats (via API)
+  let indStats = {total:0,verde:0,amarelo:0,vermelho:0};
+  if (dados && dados.INDICADORES) {
+    const rows = dados.INDICADORES.slice(3).filter(r => r[0] && String(r[0]).trim() && r[0] !== 'Cód.');
+    rows.forEach(r => {
+      const real = num(r[5]);
+      const meta = num(String(r[4]||'').replace(/\./g,''));
+      const prog = (real !== null && meta && meta > 0) ? real/meta : null;
+      const sc = statusCls(prog, esp);
+      indStats.total++;
+      if(sc==='green') indStats.verde++;
+      else if(sc==='yellow') indStats.amarelo++;
+      else indStats.vermelho++;
+    });
+  }
+
+  const totalFin = FIN_DATA.totalGeral.total;
+  const fin2026  = FIN_DATA.totalGeral.v2026;
+
+  document.getElementById('vg-content').outerHTML = `
+  <div id="vg-content">
+    <div class="kpi-grid">
+      <div class="kpi-card kpi-blue">
+        <div class="kpi-label">Total pago (projeto)</div>
+        <div class="kpi-value" style="font-size:17px">${brl(totalFin)}</div>
+        <div class="kpi-sub">Corte: 30/09/2026</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Pago em 2026</div>
+        <div class="kpi-value" style="font-size:17px">${brl(fin2026)}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Indicadores</div>
+        <div class="kpi-value">${indStats.total > 0 ? indStats.verde+'/'+indStats.total : '—'}</div>
+        <div class="kpi-sub">no verde</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Acordos</div>
+        <div class="kpi-value">${acStats.conc}</div>
+        <div class="kpi-sub">${acStats.conc} concluídos</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Ritmo esperado</div>
+        <div class="kpi-value">${pct(esp)}</div>
+        <div class="kpi-sub">nov/23 → nov/29</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+
+      <div class="card">
+        <div class="card-title">Indicadores (teoria da mudança)</div>
+        ${indStats.total > 0 ? `
+          <div class="mini-list">
+            <div class="mini-item"><span class="mini-name"><span class="dot dot-green"></span> No prazo</span><span class="mini-val" style="color:var(--green)">${indStats.verde}</span></div>
+            <div class="mini-item"><span class="mini-name"><span class="dot dot-yellow"></span> Em andamento</span><span class="mini-val" style="color:var(--yellow)">${indStats.amarelo}</span></div>
+            <div class="mini-item"><span class="mini-name"><span class="dot dot-red"></span> Crítico</span><span class="mini-val" style="color:var(--red)">${indStats.vermelho}</span></div>
+          </div>` :
+          '<div style="color:var(--muted);font-size:12px;padding:8px 0">Aguardando dados da API.</div>'
+        }
+      </div>
+
+      <div class="card">
+        <div class="card-title">Acordos BID/FIDA</div>
+        <div class="mini-list">
+          <div class="mini-item"><span class="mini-name"><span class="dot dot-green"></span> Concluído</span><span class="mini-val" style="color:var(--green)">${acStats.conc}</span></div>
+          <div class="mini-item"><span class="mini-name"><span class="dot dot-yellow"></span> Em andamento</span><span class="mini-val" style="color:var(--yellow)">${acStats.and}</span></div>
+          <div class="mini-item"><span class="mini-name"><span class="dot dot-red"></span> Em atraso</span><span class="mini-val" style="color:var(--red)">${acStats.atr}</span></div>
+          <div class="mini-item"><span class="mini-name"><span class="dot dot-grey"></span> Não iniciado</span><span class="mini-val">${acStats.ni}</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Execução financeira</div>
+        <div class="mini-list">
+          ${FIN_DATA.secretarias.map(s => `
+            <div class="mini-item">
+              <span class="mini-name" style="font-size:11px">${s.nome.split('—')[0].trim()}</span>
+              <span class="mini-val" style="font-size:11px">${brl(s.totalPago)}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+
+    </div>
+  </div>`;
+}
+
+// ── INDICADORES (via API) ──
+function renderInd(rows) {
+  if (!rows) { document.getElementById('ind-content').outerHTML='<div id="ind-content" class="state-box error">Dados de indicadores não disponíveis.</div>'; return; }
+  const esp = percEsperado();
+  const data = rows.slice(3).filter(r => r[0] && String(r[0]).trim() && r[0] !== 'Cód.');
+  let nV=0, nA=0, nR=0;
+
+  const itens = data.map(r => {
+    const cod=r[0]||'', nome=r[1]||'', lb=r[3]||'', meta=r[4]||'', real=r[5], obs=r[8]||'';
+    const realN = num(real);
+    const metaN = num(String(meta).replace(/\./g,''));
+    const prog = (realN !== null && metaN && metaN > 0) ? realN/metaN : null;
+    const sc = statusCls(prog, esp);
+    const dc = {green:'dot-green',yellow:'dot-yellow',red:'dot-red',grey:'dot-grey'}[sc];
+    const pc = {green:'pill-green',yellow:'pill-yellow',red:'pill-red',grey:'pill-grey'}[sc];
+    const bc = {green:'var(--green-bar)',yellow:'var(--yellow-bar)',red:'var(--red-bar)',grey:'#ccc'}[sc];
+    const pl = {green:'No prazo',yellow:'Em andamento',red:'Crítico',grey:'Sem dado'}[sc];
+    if(sc==='green') nV++; else if(sc==='yellow') nA++; else if(sc==='red') nR++;
+    const bw = prog !== null ? Math.min(prog*100, 100).toFixed(0) : 0;
+    return `<div class="ind-row">
+      <div style="display:flex;align-items:flex-start;gap:7px"><span class="dot ${dc}" style="margin-top:3px;flex-shrink:0"></span><span><strong>${cod}</strong> ${nome}</span></div>
+      <div style="color:var(--muted);font-size:11px">${lb} → ${meta}</div>
+      <div style="color:var(--text);font-size:11px">${realN !== null ? realN.toLocaleString('pt-BR') : '—'}</div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">${prog !== null ? pct(prog) : '—'}</div>
+        <div class="prog-wrap"><div class="prog-fill" style="width:${bw}%;background:${bc}"></div></div>
+      </div>
+      <div><span class="pill ${pc}">${pl}</span></div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('ind-content').outerHTML = `
+  <div id="ind-content">
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Total</div><div class="kpi-value">${nV+nA+nR}</div></div>
+      <div class="kpi-card kpi-green"><div class="kpi-label">No prazo</div><div class="kpi-value">${nV}</div></div>
+      <div class="kpi-card kpi-yellow"><div class="kpi-label">Em andamento</div><div class="kpi-value">${nA}</div></div>
+      <div class="kpi-card kpi-red"><div class="kpi-label">Crítico</div><div class="kpi-value">${nR}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Ritmo esperado</div><div class="kpi-value">${pct(esp)}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Indicadores — Teoria da Mudança</div>
+      <div class="ind-header"><div>Indicador</div><div>LB → Meta</div><div>Realizado</div><div>% Progresso</div><div>Status</div></div>
+      ${itens || '<div style="padding:20px;color:var(--muted)">Nenhum indicador encontrado.</div>'}
+    </div>
+  </div>`;
+}
+
+// ── PRODUTOS CRÍTICOS (via API) ──
+function renderProd(rows) {
+  if (!rows) { document.getElementById('prod-content').outerHTML='<div id="prod-content" class="state-box error">Dados de produtos críticos não disponíveis.</div>'; return; }
+  const esp = percEsperado();
+  const data = rows.slice(3).filter(r => r[0] && String(r[0]).trim() && r[0] !== '#');
+
+  const cards = data.map(r => {
+    const nome=r[1]||'', comp=r[2]||'', resp=r[3]||'';
+    const metaPOA = num(String(r[4]||'').replace(/\./g,''));
+    const metaFin = num(String(r[5]||'').replace(/\./g,''));
+    const real    = num(String(r[6]||'').replace(/\./g,''));
+    const obs     = r[12]||'';
+    const espRaw  = parseFloat(String(r[9]||'').replace('%','').replace(',','.'));
+    const espU    = !isNaN(espRaw) && espRaw > 0 ? espRaw/100 : esp;
+
+    const pPOA = (real !== null && metaPOA && metaPOA > 0) ? real/metaPOA : null;
+    const pFin = (real !== null && metaFin && metaFin > 0) ? real/metaFin : null;
+    const sc   = statusCls(pFin, espU);
+    const pc   = {green:'pill-green',yellow:'pill-yellow',red:'pill-red',grey:'pill-grey'}[sc];
+    const pl   = {green:'No prazo',yellow:'Em andamento',red:'Crítico',grey:'Sem dado'}[sc];
+    const cPOA = pPOA !== null ? (pPOA>=espU*0.9?'var(--green-bar)':pPOA>=espU*0.7?'var(--yellow-bar)':'var(--red-bar)') : '#ccc';
+    const cFin = pFin !== null ? (pFin>=espU*0.9?'var(--green-bar)':pFin>=espU*0.7?'var(--yellow-bar)':'var(--red-bar)') : '#ccc';
+
+    return `<div class="prod-card">
+      <div class="prod-header">
+        <div>
+          <div class="prod-title">${nome}</div>
+          <div class="prod-comp">${comp} · ${resp}</div>
+        </div>
+        <span class="pill ${pc}">${pl}</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
+        Realizado: <strong>${real !== null ? real.toLocaleString('pt-BR') : '—'}</strong>
+        · Meta POA: ${metaPOA ? metaPOA.toLocaleString('pt-BR') : '—'}
+        · Meta Final: ${metaFin ? metaFin.toLocaleString('pt-BR') : '—'}
+        · Esperado: ${(espU*100).toFixed(1)}%
+      </div>
+      <div class="two-col">
+        <div>
+          <div class="bar-label">% Meta POA 2026: ${pPOA !== null ? pct(pPOA) : '—'}</div>
+          <div class="prog-wrap"><div class="prog-fill" style="width:${Math.min((pPOA||0)*100,100).toFixed(0)}%;background:${cPOA}"></div></div>
+        </div>
+        <div>
+          <div class="bar-label">% Meta Final: ${pFin !== null ? pct(pFin) : '—'}</div>
+          <div class="prog-wrap"><div class="prog-fill" style="width:${Math.min((pFin||0)*100,100).toFixed(0)}%;background:${cFin}"></div></div>
+        </div>
+      </div>
+      ${obs ? `<div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5">${obs}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  document.getElementById('prod-content').outerHTML = `
+  <div id="prod-content">
+    ${cards || '<div class="state-box">Nenhum produto crítico encontrado.</div>'}
+  </div>`;
+}
+
+// ── AQUISIÇÕES (via API) ──
+function renderAquis(rows) {
+  if (!rows) { document.getElementById('aquis-content').outerHTML='<div id="aquis-content" class="state-box error">Dados de aquisições não disponíveis.</div>'; return; }
+  const data = rows.slice(4).filter(r => r[0] && String(r[0]).trim() && String(r[0]).trim() !== 'Categoria de gastos' && String(r[0]).trim() !== 'TOTAL');
+  const totRow = rows.find(r => String(r[0]||'').trim() === 'TOTAL');
+
+  const fmt = v => {
+    const n = parseFloat(String(v||'0').replace(/[^\d,]/g,'').replace(',','.'));
+    return (!isNaN(n) && n > 0) ? brl(n) : '—';
+  };
+  const maxE = Math.max(...data.map(r => parseFloat(String(r[1]||'0').replace(/[^\d,]/g,'').replace(',','.')) || 0));
+
+  const bars = data.map(r => {
+    const cat  = String(r[0]||'').trim();
+    const exec = parseFloat(String(r[1]||'0').replace(/[^\d,]/g,'').replace(',','.')) || 0;
+    const prev = parseFloat(String(r[2]||'0').replace(/[^\d,]/g,'').replace(',','.')) || 0;
+    const w    = maxE > 0 ? (exec/maxE*100).toFixed(0) : 0;
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px">
+        <span style="font-weight:600">${cat}</span>
+        <span style="color:var(--muted)">Prev. ago-dez/26: <strong>${fmt(prev)}</strong></span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:5px">Em execução: <strong>${fmt(exec)}</strong></div>
+      <div class="prog-wrap" style="height:8px"><div class="prog-fill" style="width:${w}%;background:var(--blue-bar)"></div></div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('aquis-content').outerHTML = `
+  <div id="aquis-content">
+    <div class="kpi-grid">
+      <div class="kpi-card kpi-blue"><div class="kpi-label">Total em execução</div><div class="kpi-value" style="font-size:17px">${totRow ? fmt(totRow[1]) : '—'}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Previsão ago–dez/26</div><div class="kpi-value" style="font-size:17px">${totRow ? fmt(totRow[2]) : '—'}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Categorias</div><div class="kpi-value">${data.length}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Aquisições por categoria — R$</div>
+      ${bars || '<div style="color:var(--muted);font-size:12px">Nenhuma categoria encontrada.</div>'}
+    </div>
+  </div>`;
+}
+
+// ── PERFIL PAP ──
+function renderPAP(rows) {
+  const temDados = rows && rows.slice(3).some(r => r.some(c => c && String(c).trim()));
+  if (!temDados) {
+    document.getElementById('pap-content').outerHTML = `
+    <div id="pap-content">
+      <div class="card">
+        <div class="pap-empty">
+          <div class="pap-icon">👥</div>
+          <div style="font-weight:600;margin-bottom:6px;color:var(--text)">Dados do Perfil PAP ainda não disponíveis</div>
+          <div>Atualize os dados na aba <strong>Perfil PAP</strong> da planilha de monitoramento para visualizar este painel.</div>
+        </div>
+      </div>
+    </div>`;
+    return;
+  }
+  // Se houver dados, renderiza tabela genérica
+  const header = rows[2] || [];
+  const data = rows.slice(3).filter(r => r.some(c => c && String(c).trim()));
+  const thCols = header.filter(h => h).map(h => `<th>${h}</th>`).join('');
+  const trRows = data.map(r => `<tr>${header.map((_,i) => `<td>${r[i]||'—'}</td>`).join('')}</tr>`).join('');
+
+  document.getElementById('pap-content').outerHTML = `
+  <div id="pap-content">
+    <div class="card">
+      <div class="card-title">Perfil dos Participantes do Programa (PAP)</div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr>${thCols}</tr></thead>
+          <tbody>${trRows}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── ORÇAMENTO ORGÃO (via API) ──
+function renderOrcamento(rows) {
+  if (!rows || rows.length < 4) {
+    document.getElementById('orcamento-content').outerHTML =
+      '<div id="orcamento-content" class="state-box error">Dados de Orçamento Órgão não disponíveis.</div>';
+    return;
+  }
+
+  // Linha 0 = título, linha 1 = cabeçalho secretarias, linha 2 = sub-cabeçalho
+  const secretarias = ['SEPLAN','INTERPI','SAF','SEMARH'];
+  const cores = {'SEPLAN':'#1352a2','INTERPI':'#0e7c4a','SAF':'#d49000','SEMARH':'#7b3fa0'};
+
+  // Calcula totais por secretaria (colunas: B=ValorTotal, C-F=SEPLAN, G-J=INTERPI, K-N=SAF, O-R=SEMARH)
+  const data = rows.slice(2).filter(r => r[0] && String(r[0]).trim());
+
+  // KPIs: soma dos valores totais dos componentes principais
+  let totalUS = 0;
+  const compRows = data.filter(r => String(r[0]).match(/^Componente \d/i));
+  compRows.forEach(r => {
+    const v = parseFloat(String(r[1]||'').replace(/[^\d.]/g,'')) || 0;
+    totalUS += v;
+  });
+
+  // Monta tabela com todas as linhas
+  const thSecr = secretarias.map(s =>
+    `<th colspan="4" style="text-align:center;background:${cores[s]}20;color:${cores[s]}">${s}</th>`
+  ).join('');
+  const thSub = secretarias.map(() =>
+    `<th class="num">Disp.</th><th class="num">Comp.</th><th class="num">Exec.</th><th class="num">Saldo</th>`
+  ).join('');
+
+  const tRows = data.map(r => {
+    const isComp = String(r[0]).match(/^Componente \d/i);
+    const isSub  = String(r[0]).match(/^\d+\.\d+/);
+    const bg = isComp ? 'background:#1352a215;font-weight:700' : isSub ? 'background:#f5f7fb;font-weight:600' : '';
+    const indent = (!isComp && !isSub) ? 'padding-left:20px' : '';
+
+    const fmtUS = v => {
+      const n = parseFloat(String(v||'').replace(/[^\d.]/g,'')) || 0;
+      return n > 0 ? 'US$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:0}) : 'US$0';
+    };
+
+    // Colunas: A=nome, B=total, C-F=SEPLAN(disp,comp,exec,saldo), G-J=INTERPI, K-N=SAF, O-R=SEMARH
+    const cols = [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17].map(i =>
+      `<td class="num" style="font-size:11px">${fmtUS(r[i])}</td>`
+    ).join('');
+
+    return `<tr style="${bg}">
+      <td style="${indent};font-size:12px;max-width:280px">${r[0]}</td>
+      <td class="num" style="font-weight:600;font-size:12px">${fmtUS(r[1])}</td>
+      ${cols}
+    </tr>`;
+  }).join('');
+
+  document.getElementById('orcamento-content').outerHTML = `
+  <div id="orcamento-content">
+    <div class="kpi-grid">
+      <div class="kpi-card kpi-blue">
+        <div class="kpi-label">Valor total do projeto</div>
+        <div class="kpi-value" style="font-size:17px">US$ ${totalUS.toLocaleString('pt-BR',{minimumFractionDigits:0})}</div>
+      </div>
+      ${secretarias.map(s => `
+        <div class="kpi-card">
+          <div class="kpi-label" style="color:${cores[s]}">${s}</div>
+          <div class="kpi-value" style="font-size:13px;color:${cores[s]}">Disp / Comp / Exec</div>
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-title">Planejado total do PSI — por componente e secretaria (US$)</div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th rowspan="2" style="min-width:200px">Componente / Subcomponente</th>
+              <th rowspan="2" class="num">Valor Total US$</th>
+              ${thSecr}
+            </tr>
+            <tr>${thSub}</tr>
+          </thead>
+          <tbody>${tRows}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── ENTREGA DE CISTERNAS (via API) ──
+let chartCisternas = null;
+function renderCisternas(rows) {
+  if (!rows || rows.length < 3) {
+    document.getElementById('cisternas-content').outerHTML =
+      '<div id="cisternas-content" class="state-box error">Dados de Entrega de Cisternas não disponíveis.</div>';
+    return;
+  }
+
+  // Estrutura: linha 0=cabeçalhos superiores, linha 1=EMPRESA CONTRATADA / datas, linha 2=dados inicio
+  // Detecta meses no cabeçalho (linha 1, colunas 2 em diante)
+  const cabLinha = rows[1] || [];
+  const meses = cabLinha.slice(2).filter(c => c && String(c).trim());
+
+  // Empresas: linhas com nome de empresa (CEFESA, INSTITUTO FLOR..., OBRA KOLPING)
+  const empresas = ['CEFESA','INSTITUTO FLOR DO CAJUEIRO','OBRA KOLPING'];
+  const cores = ['#1352a2','#0e7c4a','#d49000'];
+
+  // Encontra bloco ENTREGAS
+  const idxEntregas = rows.findIndex(r => String(r[0]||'').includes('ENTREGAS') || String(r[2]||'').includes('EMPRESA CONTRATADA') || (r[2] && !String(r[2]).includes('DATA')));
+  // Procura linhas de empresa no bloco de entregas
+  const getEmpresaRow = (nome, bloco) => {
+    return bloco.find(r => String(r[0]||'').toUpperCase().includes(nome.split(' ')[0]));
+  };
+
+  // Extrai dados das empresas — entregas (linhas 3,4,5 aproximadamente)
+  const blocoEntregas = rows.slice(2, rows.findIndex((r,i) => i > 2 && String(r[0]||'').includes('PAGAMENTO')) || rows.length);
+  const blocoEntregasFiltrado = blocoEntregas.filter(r => r[0] && String(r[0]).trim() && !String(r[0]).includes('Total'));
+
+  // Monta tabela de entregas
+  const numMeses = meses.length;
+  const thMeses = meses.map(m => `<th class="num" style="white-space:nowrap;font-size:10px">${m}</th>`).join('');
+
+  // Calcula total por mês
+  const totaisMes = meses.map((_, mi) => {
+    let soma = 0;
+    blocoEntregasFiltrado.forEach(r => {
+      soma += parseInt(String(r[mi+2]||'0').replace(/\D/g,'')) || 0;
+    });
+    return soma;
+  });
+
+  const totalGeral = totaisMes.reduce((a,b) => a+b, 0);
+
+  const tRowsEmp = blocoEntregasFiltrado.map((r, ei) => {
+    const cor = cores[ei % cores.length];
+    const nome = String(r[0]||'').trim();
+    const data = String(r[1]||'').trim();
+    const vals = meses.map((_,mi) => {
+      const v = parseInt(String(r[mi+2]||'0').replace(/\D/g,'')) || 0;
+      return `<td class="num" style="font-size:11px">${v > 0 ? `<strong style="color:${cor}">${v}</strong>` : '<span style="color:#ccc">0</span>'}</td>`;
+    }).join('');
+    const totalEmp = meses.reduce((s,_,mi) => s + (parseInt(String(r[mi+2]||'0').replace(/\D/g,'')) || 0), 0);
+    return `<tr>
+      <td style="font-weight:600;color:${cor}">${nome}</td>
+      <td style="font-size:11px;color:var(--muted)">${data}</td>
+      ${vals}
+      <td class="num" style="font-weight:700">${totalEmp}</td>
+    </tr>`;
+  }).join('');
+
+  const thTotais = totaisMes.map(t =>
+    `<td class="num" style="font-weight:700;background:#f2f5fb">${t > 0 ? t : '<span style="color:#ccc">0</span>'}</td>`
+  ).join('');
+
+  // Dados para gráfico (últimos meses com dados)
+  const mesesComDados = meses.filter((_,i) => totaisMes[i] > 0);
+  const totaisComDados = totaisMes.filter(t => t > 0);
+
+  document.getElementById('cisternas-content').outerHTML = `
+  <div id="cisternas-content">
+    <div class="kpi-grid">
+      <div class="kpi-card kpi-blue">
+        <div class="kpi-label">Total cisternas entregues</div>
+        <div class="kpi-value">${totalGeral.toLocaleString('pt-BR')}</div>
+        <div class="kpi-sub">Acumulado até out/26</div>
+      </div>
+      ${blocoEntregasFiltrado.map((r,ei) => {
+        const tot = meses.reduce((s,_,mi) => s + (parseInt(String(r[mi+2]||'0').replace(/\D/g,'')) || 0), 0);
+        return `<div class="kpi-card">
+          <div class="kpi-label" style="color:${cores[ei%cores.length]}">${String(r[0]||'').trim()}</div>
+          <div class="kpi-value" style="color:${cores[ei%cores.length]}">${tot.toLocaleString('pt-BR')}</div>
+          <div class="kpi-sub">unidades</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title">Entregas mensais de cisternas — por empresa (unidades)</div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Empresa</th>
+              <th>Contrato</th>
+              ${thMeses}
+              <th class="num">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tRowsEmp}
+            <tr style="background:#f2f5fb;font-weight:700">
+              <td colspan="2">Total geral</td>
+              ${thTotais}
+              <td class="num">${totalGeral}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    ${mesesComDados.length > 0 ? `
+    <div class="card">
+      <div class="card-title">Evolução mensal de entregas — total (unidades)</div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="chart-cisternas"></canvas>
+      </div>
+    </div>` : ''}
+  </div>`;
+
+  if (chartCisternas) { chartCisternas.destroy(); chartCisternas = null; }
+  if (mesesComDados.length > 0) {
+    chartCisternas = new Chart(document.getElementById('chart-cisternas'), {
+      type: 'bar',
+      data: {
+        labels: mesesComDados,
+        datasets: [{
+          data: totaisComDados,
+          backgroundColor: '#1352a2',
+          borderRadius: 5,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#6b7585', font: { size: 10 } } },
+          y: { grid: { color: '#eaedf2' }, ticks: { color: '#6b7585', font: { size: 10 } }, beginAtZero: true }
+        }
+      }
+    });
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   CARREGAMENTO PRINCIPAL
+══════════════════════════════════════════════════ */
+async function carregarTudo() {
+  document.getElementById('sync-bar').textContent = '⏳ Atualizando dados...';
+  document.getElementById('sidebar-sync').textContent = '⏳ Carregando...';
+
+  // Renderiza Financeiro imediatamente (dados embutidos)
+  renderFin();
+
+  // Tenta carregar tudo da API
+  try {
+    const r = await fetch(API_PSI);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const dados = await r.json();
+
+    renderInd(dados.INDICADORES || dados['INDICADORES'] || null);
+    renderProd(dados['PRODUTOS_CRÍTICOS'] || dados['PRODUTOS_CRITICOS'] || dados['PRODUTOS CRÍTICOS'] || null);
+    renderAquis(dados['AQUISIÇÕES'] || dados['AQUISICOES'] || null);
+    renderOrcamento(dados['ORÇAMENTO ORGÃO'] || dados['ORCAMENTO ORGAO'] || dados['ORÇAMENTO_ORGÃO'] || null);
+    renderCisternas(dados['ENTREGA DE CISTERNAS'] || dados['ENTREGA_DE_CISTERNAS'] || null);
+    renderPAP(dados['Perfil PAP'] || dados['PERFIL PAP'] || dados['perfil_pap'] || null);
+
+    // Acordos: vem da chave ACORDO_GERAL_2026
+    const rawAcordos = dados['ACORDO_GERAL_2026'] || null;
+    ACORDOS_DATA = rawAcordos ? parseAcordosRows(rawAcordos) : [];
+    renderAcordos(filtroAtivo);
+
+    renderVisaoGeral(dados);
+
+    const now = new Date();
+    const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')} · ${now.toLocaleDateString('pt-BR')}`;
+    document.getElementById('sync-bar').innerHTML = `✅ Dados sincronizados às ${ts}`;
+    document.getElementById('sidebar-sync').textContent = `✅ ${ts}`;
+
+  } catch(e) {
+    ['ind','prod','aquis','orcamento','cisternas','pap','acordos'].forEach(id => {
+      const el = document.getElementById(id+'-content');
+      if (el && (el.classList.contains('state-box') || el.textContent.includes('Carregando'))) {
+        el.className = 'state-box error';
+        el.innerHTML = `Não foi possível carregar os dados.<br><small>${e.message}</small>`;
+      }
+    });
+    renderVisaoGeral(null);
+    document.getElementById('sync-bar').innerHTML = `⚠️ Financeiro: dados locais. API indisponível: <em>${e.message}</em>`;
+    document.getElementById('sidebar-sync').textContent = '⚠️ API indisponível';
+  }
+}
+
+// Inicializa
+carregarTudo();
+</script>
+</body>
+</html>
