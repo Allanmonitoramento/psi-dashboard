@@ -41,7 +41,6 @@ body {
   line-height: 1.5;
 }
 
-/* ── LAYOUT ── */
 .app { display: flex; min-height: 100vh; }
 
 .sidebar {
@@ -138,7 +137,6 @@ body {
   min-height: 100vh;
 }
 
-/* ── HEADER ── */
 .page-header {
   display: flex;
   align-items: flex-start;
@@ -169,11 +167,9 @@ body {
   display: flex; align-items: center; gap: 6px;
 }
 
-/* ── PANELS ── */
 .panel { display: none; }
 .panel.active { display: block; }
 
-/* ── KPI ROW ── */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -198,7 +194,6 @@ body {
 .kpi-card.kpi-red .kpi-value { color: var(--red); }
 .kpi-card.kpi-blue .kpi-value { color: var(--accent); }
 
-/* ── SECTION CARD ── */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -214,7 +209,6 @@ body {
   margin-bottom: 14px;
 }
 
-/* ── TABLE ── */
 .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
 .tbl th { text-align: left; padding: 8px 10px; color: var(--muted); font-weight: 600; font-size: 11px; border-bottom: 2px solid var(--border); background: #f8f9fb; }
 .tbl td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
@@ -223,11 +217,9 @@ body {
 .tbl tr:hover td { background: #f8f9fb; }
 .tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
 
-/* ── PROGRESS BAR ── */
 .prog-wrap { width: 100%; height: 5px; background: #eaedf2; border-radius: 3px; overflow: hidden; min-width: 60px; }
 .prog-fill { height: 100%; border-radius: 3px; transition: width .3s; }
 
-/* ── PILLS ── */
 .pill {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 10px; font-weight: 600; padding: 2px 8px;
@@ -239,7 +231,6 @@ body {
 .pill-grey { background: #eaedf2; color: var(--muted); }
 .pill-blue { background: var(--accent-light); color: var(--accent); }
 
-/* ── DOT ── */
 .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
 .dot-green { background: var(--green); }
 .dot-yellow { background: #d49000; }
@@ -247,7 +238,6 @@ body {
 .dot-grey { background: var(--subtle); }
 .dot-blue { background: var(--accent); }
 
-/* ── INDICATOR ROWS ── */
 .ind-header {
   display: grid;
   grid-template-columns: 2.5fr 1fr 1fr 1.2fr 80px;
@@ -266,7 +256,6 @@ body {
 }
 .ind-row:last-child { border-bottom: none; }
 
-/* ── PRODUCT CARDS ── */
 .prod-card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 14px 16px;
@@ -280,7 +269,6 @@ body {
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
 .bar-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 
-/* ── ACORDOS ── */
 .acord-filters {
   display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;
 }
@@ -294,7 +282,6 @@ body {
 .acord-table .tbl td { font-size: 11.5px; }
 .acord-activity { max-width: 420px; }
 
-/* ── VISAO GERAL ── */
 .vg-section-title {
   font-size: 11px; font-weight: 700; color: var(--muted);
   text-transform: uppercase; letter-spacing: .06em;
@@ -310,7 +297,6 @@ body {
 .mini-name { font-size: 12px; color: var(--text); flex: 1; }
 .mini-val { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; }
 
-/* ── FINANCEIRO ── */
 .fin-section { margin-bottom: 10px; }
 .fin-org {
   font-size: 12px; font-weight: 700; color: var(--accent);
@@ -318,16 +304,13 @@ body {
   border-radius: 6px; margin-bottom: 2px;
 }
 
-/* ── PAP ── */
 .pap-empty {
   text-align: center; padding: 48px 20px; color: var(--muted); font-size: 13px;
 }
 .pap-empty .pap-icon { font-size: 36px; margin-bottom: 12px; }
 
-/* ── CHART ── */
 .chart-wrap { position: relative; width: 100%; }
 
-/* ── LOADING / ERROR ── */
 .state-box {
   text-align: center; padding: 40px 20px;
   background: var(--surface); border-radius: var(--radius);
@@ -335,7 +318,14 @@ body {
 }
 .state-box.error { background: var(--red-bg); color: var(--red); border-color: #f5b8b8; }
 
-/* ── RESPONSIVE ── */
+/* Debug box */
+.debug-box {
+  background: #1e2a3a; color: #7ecfff; font-family: monospace;
+  font-size: 11px; padding: 12px 16px; border-radius: var(--radius);
+  margin-bottom: 14px; display: none;
+}
+.debug-box.visible { display: block; }
+
 @media (max-width: 768px) {
   .sidebar { display: none; }
   .main { margin-left: 0; padding: 14px; }
@@ -349,7 +339,6 @@ body {
 
 <div class="app">
 
-<!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sidebar-logo">
     <div class="proj-name">PSI — Painel M&A</div>
@@ -377,7 +366,6 @@ body {
   </div>
 </aside>
 
-<!-- MAIN -->
 <main class="main">
 
   <div class="page-header">
@@ -388,52 +376,47 @@ body {
     <div class="header-actions">
       <span class="pill pill-blue">Monitoramento &amp; Avaliação</span>
       <button class="btn-refresh" onclick="carregarTudo()">↻ Atualizar</button>
+      <button class="btn-refresh" onclick="toggleDebug()" title="Diagnóstico da API">🔍</button>
     </div>
   </div>
 
   <div class="sync-bar" id="sync-bar">⏳ Carregando dados...</div>
 
-  <!-- VISÃO GERAL -->
+  <!-- Debug box (oculta por padrão, ativa com botão 🔍) -->
+  <div class="debug-box" id="debug-box"></div>
+
   <div id="panel-visao" class="panel active">
     <div class="state-box" id="vg-content">Carregando...</div>
   </div>
 
-  <!-- FINANCEIRO -->
   <div id="panel-fin" class="panel">
     <div class="state-box" id="fin-content">Carregando...</div>
   </div>
 
-  <!-- INDICADORES -->
   <div id="panel-ind" class="panel">
     <div class="state-box" id="ind-content">Carregando...</div>
   </div>
 
-  <!-- PRODUTOS CRÍTICOS -->
   <div id="panel-prod" class="panel">
     <div class="state-box" id="prod-content">Carregando...</div>
   </div>
 
-  <!-- AQUISIÇÕES -->
   <div id="panel-aquis" class="panel">
     <div class="state-box" id="aquis-content">Carregando...</div>
   </div>
 
-  <!-- ORÇAMENTO ORGÃO -->
   <div id="panel-orcamento" class="panel">
     <div class="state-box" id="orcamento-content">Carregando...</div>
   </div>
 
-  <!-- ENTREGA DE CISTERNAS -->
   <div id="panel-cisternas" class="panel">
     <div class="state-box" id="cisternas-content">Carregando...</div>
   </div>
 
-  <!-- PERFIL PAP -->
   <div id="panel-pap" class="panel">
     <div class="state-box" id="pap-content">Carregando...</div>
   </div>
 
-  <!-- ACORDOS -->
   <div id="panel-acordos" class="panel">
     <div class="state-box" id="acordos-content">Carregando...</div>
   </div>
@@ -447,10 +430,11 @@ body {
 ══════════════════════════════════════════════════ */
 const API_PSI = 'https://script.google.com/macros/s/AKfycbyYv7Lcjlq6i9tqKgvBfJp5p9SmBYjEN0v4gI4j-P_vUeHOYdWHR2MvyU0biOZPM5a5rQ/exec';
 
-// Cache de acordos (preenchido pela API)
 let ACORDOS_DATA = [];
+let _debugVisible = false;
+let _apiKeys = [];
 
-// Dados Financeiros embutidos (Despesas Pagas por Fonte de Financiamento - corte 30/09/2026)
+// Dados Financeiros embutidos (corte 30/09/2026)
 const FIN_DATA = {
   corte: "30/09/2026",
   secretarias: [
@@ -535,12 +519,65 @@ function pillAcord(s) {
   return m[s] || ['pill-grey','?'];
 }
 
+/* ══════════════════════════════════════════════════
+   FINDKEY — busca tolerante a acentos, espaços e maiúsculas
+   Recebe o objeto de dados e N candidatos; devolve o valor
+   da primeira chave que bater (exata ou normalizada).
+══════════════════════════════════════════════════ */
+function findKey(data, ...candidates) {
+  if (!data) return null;
+
+  // 1. Tentativa exata
+  for (const k of candidates) {
+    if (data[k] !== undefined) return data[k];
+  }
+
+  // 2. Normalização: minúsculas, sem acentos, traços/espaços/underscores viram '_'
+  const norm = s => String(s)
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[-\s_]+/g, '_')
+    .trim();
+
+  const dataMap = {};
+  for (const k of Object.keys(data)) {
+    dataMap[norm(k)] = data[k];
+  }
+
+  for (const k of candidates) {
+    const v = dataMap[norm(k)];
+    if (v !== undefined) return v;
+  }
+
+  return null;
+}
+
+/* ══════════════════════════════════════════════════
+   DEBUG
+══════════════════════════════════════════════════ */
+function toggleDebug() {
+  _debugVisible = !_debugVisible;
+  const box = document.getElementById('debug-box');
+  if (_debugVisible && _apiKeys.length > 0) {
+    box.innerHTML = '<strong>Chaves recebidas da API:</strong><br>' +
+      _apiKeys.map((k,i) => `${i+1}. "${k}"`).join('<br>');
+    box.classList.add('visible');
+  } else {
+    box.classList.remove('visible');
+  }
+}
+
 let chartFin = null;
 
 /* ══════════════════════════════════════════════════
    NAVEGAÇÃO
 ══════════════════════════════════════════════════ */
-const TITLES = {visao:'Visão Geral',fin:'Financeiro',ind:'Indicadores',prod:'Produtos Críticos',aquis:'Aquisições',orcamento:'Orçamento Órgão',cisternas:'Entrega de Cisternas',pap:'Perfil PAP',acordos:'Acordos'};
+const TITLES = {
+  visao:'Visão Geral', fin:'Financeiro', ind:'Indicadores',
+  prod:'Produtos Críticos', aquis:'Aquisições',
+  orcamento:'Orçamento Órgão', cisternas:'Entrega de Cisternas',
+  pap:'Perfil PAP', acordos:'Acordos'
+};
 function irPara(id, btn) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -557,9 +594,7 @@ function irPara(id, btn) {
 function renderFin() {
   const esp = percEsperado();
   const d = FIN_DATA;
-
-  const totalExec = d.totalGeral.v2024 + d.totalGeral.v2025 + d.totalGeral.v2026;
-  const totalContr = 63781849.57; // total do projeto referência
+  const totalContr = 63781849.57;
 
   const tabelaHTML = d.secretarias.map(s => {
     const subtotal = s.total2024 + s.total2025 + s.total2026;
@@ -567,7 +602,6 @@ function renderFin() {
     const sc = statusCls(pExec, esp);
     const barC = {green:'var(--green-bar)',yellow:'var(--yellow-bar)',red:'var(--red-bar)',grey:'#ccc'}[sc];
     const pillC = {green:'pill-green',yellow:'pill-yellow',red:'pill-red',grey:'pill-grey'}[sc];
-
     const subRows = s.fontes.map(f => `
       <tr>
         <td style="padding-left:24px;color:var(--muted);">${f.nome}</td>
@@ -577,7 +611,6 @@ function renderFin() {
         <td class="num" style="font-weight:600">${brl(f.total)}</td>
         <td></td><td></td>
       </tr>`).join('');
-
     return `
       <tr style="background:#f5f7fb;">
         <td style="font-weight:700;color:var(--accent);">${s.nome}</td>
@@ -589,8 +622,7 @@ function renderFin() {
           <div class="prog-wrap"><div class="prog-fill" style="width:${Math.min(pExec*100,100).toFixed(0)}%;background:${barC}"></div></div>
         </td>
         <td><span class="pill ${pillC}">${pct(pExec)}</span></td>
-      </tr>
-      ${subRows}`;
+      </tr>${subRows}`;
   }).join('');
 
   document.getElementById('fin-content').outerHTML = `
@@ -602,19 +634,14 @@ function renderFin() {
       <div class="kpi-card kpi-green"><div class="kpi-label">Total geral pago</div><div class="kpi-value" style="font-size:16px">${brl(d.totalGeral.total)}</div></div>
       <div class="kpi-card"><div class="kpi-label">Corte de dados</div><div class="kpi-value" style="font-size:16px">30/09/26</div><div class="kpi-sub">Data base</div></div>
     </div>
-
     <div class="card">
       <div class="card-title">Despesas pagas por fonte de financiamento — R$</div>
       <div style="overflow-x:auto">
         <table class="tbl">
           <thead><tr>
             <th>Secretaria / Fonte</th>
-            <th class="num">2024</th>
-            <th class="num">2025</th>
-            <th class="num">2026</th>
-            <th class="num">Total Pago</th>
-            <th>Progresso</th>
-            <th>% do Total</th>
+            <th class="num">2024</th><th class="num">2025</th><th class="num">2026</th>
+            <th class="num">Total Pago</th><th>Progresso</th><th>% do Total</th>
           </tr></thead>
           <tbody>
             ${tabelaHTML}
@@ -631,12 +658,9 @@ function renderFin() {
         </table>
       </div>
     </div>
-
     <div class="card">
       <div class="card-title">Distribuição por secretaria — Total Pago (R$)</div>
-      <div class="chart-wrap" style="height:240px">
-        <canvas id="chart-fin"></canvas>
-      </div>
+      <div class="chart-wrap" style="height:240px"><canvas id="chart-fin"></canvas></div>
     </div>
   </div>`;
 
@@ -646,29 +670,23 @@ function renderFin() {
   const colors = ['#1352a2','#0e7c4a','#d49000','#e03c3f','#6b7585'];
   chartFin = new Chart(document.getElementById('chart-fin'), {
     type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        data: vals, backgroundColor: colors, borderRadius: 5, borderSkipped: false
-      }]
-    },
+    data: { labels, datasets: [{ data: vals, backgroundColor: colors, borderRadius: 5, borderSkipped: false }] },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: { display: false }, ticks: { color: '#6b7585', font: { size: 10 } } },
-        y: { grid: { color: '#eaedf2' }, ticks: { color: '#6b7585', font: { size: 10 }, callback: v => 'R$' + (v/1e6).toFixed(1) + 'mi' } }
+        x: { grid:{display:false}, ticks:{color:'#6b7585',font:{size:10}} },
+        y: { grid:{color:'#eaedf2'}, ticks:{color:'#6b7585',font:{size:10},callback: v => 'R$'+(v/1e6).toFixed(1)+'mi'} }
       }
     }
   });
 }
 
-// ── ACORDOS (via API) ──
+// ── ACORDOS (via API — aba: ACORDO GERAL- 2026) ──
 let filtroAtivo = 'Todos';
 
 function parseAcordosRows(rows) {
   if (!rows || rows.length < 3) return [];
-  // Linha 0 = título, linha 1 = cabeçalho (NÍVEL, Atividade, Responsável, Prazo, Status, Evidências)
   return rows.slice(2).filter(r => r[0] && String(r[0]).trim() && String(r[1]).trim()).map(r => ({
     nivel:     String(r[0]||'').trim(),
     atividade: String(r[1]||'').trim(),
@@ -696,7 +714,9 @@ function renderAcordos(filtro) {
     else stats.naoIniciado++;
   });
 
-  const dados = filtroAtivo === 'Todos' ? ACORDOS_DATA : ACORDOS_DATA.filter(a => a.nivel === filtroAtivo);
+  const dados = filtroAtivo === 'Todos'
+    ? ACORDOS_DATA
+    : ACORDOS_DATA.filter(a => a.nivel === filtroAtivo);
 
   const rows = dados.map((a,i) => {
     const [cls,ic] = pillAcord(a.status);
@@ -724,20 +744,15 @@ function renderAcordos(filtro) {
       <div class="kpi-card kpi-red"><div class="kpi-label">Em atraso</div><div class="kpi-value">${stats.atraso}</div><div class="kpi-sub">${pct(stats.atraso/stats.total)}</div></div>
       <div class="kpi-card"><div class="kpi-label">Não iniciados</div><div class="kpi-value">${stats.naoIniciado}</div><div class="kpi-sub">${pct(stats.naoIniciado/stats.total)}</div></div>
     </div>
-
     <div class="card acord-table">
-      <div class="card-title">Acordos — ${filtroAtivo} (${dados.length} registros)</div>
+      <div class="card-title">Acordos Geral 2026 — ${filtroAtivo} (${dados.length} registros)</div>
       <div class="acord-filters">${filterBtns}</div>
       <div style="overflow-x:auto">
         <table class="tbl">
           <thead><tr>
             <th style="width:32px">#</th>
-            <th>Nível</th>
-            <th>Atividade</th>
-            <th>Responsável</th>
-            <th>Prazo</th>
-            <th>Status</th>
-            <th>Evidências</th>
+            <th>Nível</th><th>Atividade</th><th>Responsável</th>
+            <th>Prazo</th><th>Status</th><th>Evidências</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -749,8 +764,6 @@ function renderAcordos(filtro) {
 // ── VISÃO GERAL ──
 function renderVisaoGeral(dados) {
   const esp = percEsperado();
-
-  // Acordos stats
   const acStats = {total:ACORDOS_DATA.length, conc:0, and:0, atr:0, ni:0};
   ACORDOS_DATA.forEach(a => {
     if(a.status==='Concluído') acStats.conc++;
@@ -759,20 +772,22 @@ function renderVisaoGeral(dados) {
     else acStats.ni++;
   });
 
-  // Indicadores stats (via API)
   let indStats = {total:0,verde:0,amarelo:0,vermelho:0};
-  if (dados && dados.INDICADORES) {
-    const rows = dados.INDICADORES.slice(3).filter(r => r[0] && String(r[0]).trim() && r[0] !== 'Cód.');
-    rows.forEach(r => {
-      const real = num(r[5]);
-      const meta = num(String(r[4]||'').replace(/\./g,''));
-      const prog = (real !== null && meta && meta > 0) ? real/meta : null;
-      const sc = statusCls(prog, esp);
-      indStats.total++;
-      if(sc==='green') indStats.verde++;
-      else if(sc==='yellow') indStats.amarelo++;
-      else indStats.vermelho++;
-    });
+  if (dados) {
+    const indRows = findKey(dados, 'INDICADORES');
+    if (indRows) {
+      const rows = indRows.slice(3).filter(r => r[0] && String(r[0]).trim() && r[0] !== 'Cód.');
+      rows.forEach(r => {
+        const real = num(r[5]);
+        const meta = num(String(r[4]||'').replace(/\./g,''));
+        const prog = (real !== null && meta && meta > 0) ? real/meta : null;
+        const sc = statusCls(prog, esp);
+        indStats.total++;
+        if(sc==='green') indStats.verde++;
+        else if(sc==='yellow') indStats.amarelo++;
+        else indStats.vermelho++;
+      });
+    }
   }
 
   const totalFin = FIN_DATA.totalGeral.total;
@@ -791,14 +806,13 @@ function renderVisaoGeral(dados) {
         <div class="kpi-value" style="font-size:17px">${brl(fin2026)}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Indicadores</div>
+        <div class="kpi-label">Indicadores no verde</div>
         <div class="kpi-value">${indStats.total > 0 ? indStats.verde+'/'+indStats.total : '—'}</div>
-        <div class="kpi-sub">no verde</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Acordos</div>
+        <div class="kpi-label">Acordos concluídos</div>
         <div class="kpi-value">${acStats.conc}</div>
-        <div class="kpi-sub">${acStats.conc} concluídos</div>
+        <div class="kpi-sub">de ${acStats.total} acordos</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Ritmo esperado</div>
@@ -808,9 +822,8 @@ function renderVisaoGeral(dados) {
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
-
       <div class="card">
-        <div class="card-title">Indicadores (teoria da mudança)</div>
+        <div class="card-title">Indicadores</div>
         ${indStats.total > 0 ? `
           <div class="mini-list">
             <div class="mini-item"><span class="mini-name"><span class="dot dot-green"></span> No prazo</span><span class="mini-val" style="color:var(--green)">${indStats.verde}</span></div>
@@ -820,9 +833,8 @@ function renderVisaoGeral(dados) {
           '<div style="color:var(--muted);font-size:12px;padding:8px 0">Aguardando dados da API.</div>'
         }
       </div>
-
       <div class="card">
-        <div class="card-title">Acordos BID/FIDA</div>
+        <div class="card-title">Acordos Geral 2026</div>
         <div class="mini-list">
           <div class="mini-item"><span class="mini-name"><span class="dot dot-green"></span> Concluído</span><span class="mini-val" style="color:var(--green)">${acStats.conc}</span></div>
           <div class="mini-item"><span class="mini-name"><span class="dot dot-yellow"></span> Em andamento</span><span class="mini-val" style="color:var(--yellow)">${acStats.and}</span></div>
@@ -830,7 +842,6 @@ function renderVisaoGeral(dados) {
           <div class="mini-item"><span class="mini-name"><span class="dot dot-grey"></span> Não iniciado</span><span class="mini-val">${acStats.ni}</span></div>
         </div>
       </div>
-
       <div class="card">
         <div class="card-title">Execução financeira</div>
         <div class="mini-list">
@@ -841,14 +852,17 @@ function renderVisaoGeral(dados) {
             </div>`).join('')}
         </div>
       </div>
-
     </div>
   </div>`;
 }
 
-// ── INDICADORES (via API) ──
+// ── INDICADORES ──
 function renderInd(rows) {
-  if (!rows) { document.getElementById('ind-content').outerHTML='<div id="ind-content" class="state-box error">Dados de indicadores não disponíveis.</div>'; return; }
+  if (!rows) {
+    document.getElementById('ind-content').outerHTML =
+      '<div id="ind-content" class="state-box error">Dados de indicadores não disponíveis.<br><small>Verifique o botão 🔍 para ver as chaves da API.</small></div>';
+    return;
+  }
   const esp = percEsperado();
   const data = rows.slice(3).filter(r => r[0] && String(r[0]).trim() && r[0] !== 'Cód.');
   let nV=0, nA=0, nR=0;
@@ -894,9 +908,13 @@ function renderInd(rows) {
   </div>`;
 }
 
-// ── PRODUTOS CRÍTICOS (via API) ──
+// ── PRODUTOS CRÍTICOS ──
 function renderProd(rows) {
-  if (!rows) { document.getElementById('prod-content').outerHTML='<div id="prod-content" class="state-box error">Dados de produtos críticos não disponíveis.</div>'; return; }
+  if (!rows) {
+    document.getElementById('prod-content').outerHTML =
+      '<div id="prod-content" class="state-box error">Dados de produtos críticos não disponíveis.<br><small>Verifique o botão 🔍 para ver as chaves da API.</small></div>';
+    return;
+  }
   const esp = percEsperado();
   const data = rows.slice(3).filter(r => r[0] && String(r[0]).trim() && r[0] !== '#');
 
@@ -908,7 +926,6 @@ function renderProd(rows) {
     const obs     = r[12]||'';
     const espRaw  = parseFloat(String(r[9]||'').replace('%','').replace(',','.'));
     const espU    = !isNaN(espRaw) && espRaw > 0 ? espRaw/100 : esp;
-
     const pPOA = (real !== null && metaPOA && metaPOA > 0) ? real/metaPOA : null;
     const pFin = (real !== null && metaFin && metaFin > 0) ? real/metaFin : null;
     const sc   = statusCls(pFin, espU);
@@ -916,7 +933,6 @@ function renderProd(rows) {
     const pl   = {green:'No prazo',yellow:'Em andamento',red:'Crítico',grey:'Sem dado'}[sc];
     const cPOA = pPOA !== null ? (pPOA>=espU*0.9?'var(--green-bar)':pPOA>=espU*0.7?'var(--yellow-bar)':'var(--red-bar)') : '#ccc';
     const cFin = pFin !== null ? (pFin>=espU*0.9?'var(--green-bar)':pFin>=espU*0.7?'var(--yellow-bar)':'var(--red-bar)') : '#ccc';
-
     return `<div class="prod-card">
       <div class="prod-header">
         <div>
@@ -951,18 +967,20 @@ function renderProd(rows) {
   </div>`;
 }
 
-// ── AQUISIÇÕES (via API) ──
+// ── AQUISIÇÕES ──
 function renderAquis(rows) {
-  if (!rows) { document.getElementById('aquis-content').outerHTML='<div id="aquis-content" class="state-box error">Dados de aquisições não disponíveis.</div>'; return; }
+  if (!rows) {
+    document.getElementById('aquis-content').outerHTML =
+      '<div id="aquis-content" class="state-box error">Dados de aquisições não disponíveis.<br><small>Verifique o botão 🔍 para ver as chaves da API.</small></div>';
+    return;
+  }
   const data = rows.slice(4).filter(r => r[0] && String(r[0]).trim() && String(r[0]).trim() !== 'Categoria de gastos' && String(r[0]).trim() !== 'TOTAL');
   const totRow = rows.find(r => String(r[0]||'').trim() === 'TOTAL');
-
   const fmt = v => {
     const n = parseFloat(String(v||'0').replace(/[^\d,]/g,'').replace(',','.'));
     return (!isNaN(n) && n > 0) ? brl(n) : '—';
   };
   const maxE = Math.max(...data.map(r => parseFloat(String(r[1]||'0').replace(/[^\d,]/g,'').replace(',','.')) || 0));
-
   const bars = data.map(r => {
     const cat  = String(r[0]||'').trim();
     const exec = parseFloat(String(r[1]||'0').replace(/[^\d,]/g,'').replace(',','.')) || 0;
@@ -1002,18 +1020,16 @@ function renderPAP(rows) {
         <div class="pap-empty">
           <div class="pap-icon">👥</div>
           <div style="font-weight:600;margin-bottom:6px;color:var(--text)">Dados do Perfil PAP ainda não disponíveis</div>
-          <div>Atualize os dados na aba <strong>Perfil PAP</strong> da planilha de monitoramento para visualizar este painel.</div>
+          <div>Atualize os dados na aba <strong>Perfil PAP</strong> da planilha para visualizar este painel.</div>
         </div>
       </div>
     </div>`;
     return;
   }
-  // Se houver dados, renderiza tabela genérica
   const header = rows[2] || [];
   const data = rows.slice(3).filter(r => r.some(c => c && String(c).trim()));
   const thCols = header.filter(h => h).map(h => `<th>${h}</th>`).join('');
   const trRows = data.map(r => `<tr>${header.map((_,i) => `<td>${r[i]||'—'}</td>`).join('')}</tr>`).join('');
-
   document.getElementById('pap-content').outerHTML = `
   <div id="pap-content">
     <div class="card">
@@ -1028,53 +1044,38 @@ function renderPAP(rows) {
   </div>`;
 }
 
-// ── ORÇAMENTO ORGÃO (via API) ──
+// ── ORÇAMENTO ÓRGÃO ──
 function renderOrcamento(rows) {
   if (!rows || rows.length < 4) {
     document.getElementById('orcamento-content').outerHTML =
-      '<div id="orcamento-content" class="state-box error">Dados de Orçamento Órgão não disponíveis.</div>';
+      '<div id="orcamento-content" class="state-box error">Dados de Orçamento Órgão não disponíveis.<br><small>Verifique o botão 🔍 para ver as chaves da API.</small></div>';
     return;
   }
-
-  // Linha 0 = título, linha 1 = cabeçalho secretarias, linha 2 = sub-cabeçalho
   const secretarias = ['SEPLAN','INTERPI','SAF','SEMARH'];
   const cores = {'SEPLAN':'#1352a2','INTERPI':'#0e7c4a','SAF':'#d49000','SEMARH':'#7b3fa0'};
-
-  // Calcula totais por secretaria (colunas: B=ValorTotal, C-F=SEPLAN, G-J=INTERPI, K-N=SAF, O-R=SEMARH)
   const data = rows.slice(2).filter(r => r[0] && String(r[0]).trim());
-
-  // KPIs: soma dos valores totais dos componentes principais
   let totalUS = 0;
-  const compRows = data.filter(r => String(r[0]).match(/^Componente \d/i));
-  compRows.forEach(r => {
-    const v = parseFloat(String(r[1]||'').replace(/[^\d.]/g,'')) || 0;
-    totalUS += v;
+  data.filter(r => String(r[0]).match(/^Componente \d/i)).forEach(r => {
+    totalUS += parseFloat(String(r[1]||'').replace(/[^\d.]/g,'')) || 0;
   });
-
-  // Monta tabela com todas as linhas
   const thSecr = secretarias.map(s =>
     `<th colspan="4" style="text-align:center;background:${cores[s]}20;color:${cores[s]}">${s}</th>`
   ).join('');
   const thSub = secretarias.map(() =>
     `<th class="num">Disp.</th><th class="num">Comp.</th><th class="num">Exec.</th><th class="num">Saldo</th>`
   ).join('');
-
   const tRows = data.map(r => {
     const isComp = String(r[0]).match(/^Componente \d/i);
     const isSub  = String(r[0]).match(/^\d+\.\d+/);
     const bg = isComp ? 'background:#1352a215;font-weight:700' : isSub ? 'background:#f5f7fb;font-weight:600' : '';
     const indent = (!isComp && !isSub) ? 'padding-left:20px' : '';
-
     const fmtUS = v => {
       const n = parseFloat(String(v||'').replace(/[^\d.]/g,'')) || 0;
       return n > 0 ? 'US$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:0}) : 'US$0';
     };
-
-    // Colunas: A=nome, B=total, C-F=SEPLAN(disp,comp,exec,saldo), G-J=INTERPI, K-N=SAF, O-R=SEMARH
     const cols = [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17].map(i =>
       `<td class="num" style="font-size:11px">${fmtUS(r[i])}</td>`
     ).join('');
-
     return `<tr style="${bg}">
       <td style="${indent};font-size:12px;max-width:280px">${r[0]}</td>
       <td class="num" style="font-weight:600;font-size:12px">${fmtUS(r[1])}</td>
@@ -1114,50 +1115,26 @@ function renderOrcamento(rows) {
   </div>`;
 }
 
-// ── ENTREGA DE CISTERNAS (via API) ──
+// ── ENTREGA DE CISTERNAS ──
 let chartCisternas = null;
 function renderCisternas(rows) {
   if (!rows || rows.length < 3) {
     document.getElementById('cisternas-content').outerHTML =
-      '<div id="cisternas-content" class="state-box error">Dados de Entrega de Cisternas não disponíveis.</div>';
+      '<div id="cisternas-content" class="state-box error">Dados de Entrega de Cisternas não disponíveis.<br><small>Verifique o botão 🔍 para ver as chaves da API.</small></div>';
     return;
   }
-
-  // Estrutura: linha 0=cabeçalhos superiores, linha 1=EMPRESA CONTRATADA / datas, linha 2=dados inicio
-  // Detecta meses no cabeçalho (linha 1, colunas 2 em diante)
   const cabLinha = rows[1] || [];
   const meses = cabLinha.slice(2).filter(c => c && String(c).trim());
-
-  // Empresas: linhas com nome de empresa (CEFESA, INSTITUTO FLOR..., OBRA KOLPING)
-  const empresas = ['CEFESA','INSTITUTO FLOR DO CAJUEIRO','OBRA KOLPING'];
   const cores = ['#1352a2','#0e7c4a','#d49000'];
-
-  // Encontra bloco ENTREGAS
-  const idxEntregas = rows.findIndex(r => String(r[0]||'').includes('ENTREGAS') || String(r[2]||'').includes('EMPRESA CONTRATADA') || (r[2] && !String(r[2]).includes('DATA')));
-  // Procura linhas de empresa no bloco de entregas
-  const getEmpresaRow = (nome, bloco) => {
-    return bloco.find(r => String(r[0]||'').toUpperCase().includes(nome.split(' ')[0]));
-  };
-
-  // Extrai dados das empresas — entregas (linhas 3,4,5 aproximadamente)
-  const blocoEntregas = rows.slice(2, rows.findIndex((r,i) => i > 2 && String(r[0]||'').includes('PAGAMENTO')) || rows.length);
-  const blocoEntregasFiltrado = blocoEntregas.filter(r => r[0] && String(r[0]).trim() && !String(r[0]).includes('Total'));
-
-  // Monta tabela de entregas
-  const numMeses = meses.length;
+  const blocoEntregas = rows.slice(2, rows.length);
+  const blocoEntregasFiltrado = blocoEntregas.filter(r => r[0] && String(r[0]).trim() && !String(r[0]).includes('Total') && !String(r[0]).includes('PAGAMENTO'));
   const thMeses = meses.map(m => `<th class="num" style="white-space:nowrap;font-size:10px">${m}</th>`).join('');
-
-  // Calcula total por mês
   const totaisMes = meses.map((_, mi) => {
     let soma = 0;
-    blocoEntregasFiltrado.forEach(r => {
-      soma += parseInt(String(r[mi+2]||'0').replace(/\D/g,'')) || 0;
-    });
+    blocoEntregasFiltrado.forEach(r => { soma += parseInt(String(r[mi+2]||'0').replace(/\D/g,'')) || 0; });
     return soma;
   });
-
   const totalGeral = totaisMes.reduce((a,b) => a+b, 0);
-
   const tRowsEmp = blocoEntregasFiltrado.map((r, ei) => {
     const cor = cores[ei % cores.length];
     const nome = String(r[0]||'').trim();
@@ -1174,12 +1151,9 @@ function renderCisternas(rows) {
       <td class="num" style="font-weight:700">${totalEmp}</td>
     </tr>`;
   }).join('');
-
   const thTotais = totaisMes.map(t =>
     `<td class="num" style="font-weight:700;background:#f2f5fb">${t > 0 ? t : '<span style="color:#ccc">0</span>'}</td>`
   ).join('');
-
-  // Dados para gráfico (últimos meses com dados)
   const mesesComDados = meses.filter((_,i) => totaisMes[i] > 0);
   const totaisComDados = totaisMes.filter(t => t > 0);
 
@@ -1189,7 +1163,7 @@ function renderCisternas(rows) {
       <div class="kpi-card kpi-blue">
         <div class="kpi-label">Total cisternas entregues</div>
         <div class="kpi-value">${totalGeral.toLocaleString('pt-BR')}</div>
-        <div class="kpi-sub">Acumulado até out/26</div>
+        <div class="kpi-sub">Acumulado</div>
       </div>
       ${blocoEntregasFiltrado.map((r,ei) => {
         const tot = meses.reduce((s,_,mi) => s + (parseInt(String(r[mi+2]||'0').replace(/\D/g,'')) || 0), 0);
@@ -1200,19 +1174,15 @@ function renderCisternas(rows) {
         </div>`;
       }).join('')}
     </div>
-
     <div class="card">
-      <div class="card-title">Entregas mensais de cisternas — por empresa (unidades)</div>
+      <div class="card-title">Entregas mensais — por empresa (unidades)</div>
       <div style="overflow-x:auto">
         <table class="tbl">
-          <thead>
-            <tr>
-              <th>Empresa</th>
-              <th>Contrato</th>
-              ${thMeses}
-              <th class="num">Total</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th>Empresa</th><th>Contrato</th>
+            ${thMeses}
+            <th class="num">Total</th>
+          </tr></thead>
           <tbody>
             ${tRowsEmp}
             <tr style="background:#f2f5fb;font-weight:700">
@@ -1224,13 +1194,10 @@ function renderCisternas(rows) {
         </table>
       </div>
     </div>
-
     ${mesesComDados.length > 0 ? `
     <div class="card">
       <div class="card-title">Evolução mensal de entregas — total (unidades)</div>
-      <div class="chart-wrap" style="height:220px">
-        <canvas id="chart-cisternas"></canvas>
-      </div>
+      <div class="chart-wrap" style="height:220px"><canvas id="chart-cisternas"></canvas></div>
     </div>` : ''}
   </div>`;
 
@@ -1238,21 +1205,13 @@ function renderCisternas(rows) {
   if (mesesComDados.length > 0) {
     chartCisternas = new Chart(document.getElementById('chart-cisternas'), {
       type: 'bar',
-      data: {
-        labels: mesesComDados,
-        datasets: [{
-          data: totaisComDados,
-          backgroundColor: '#1352a2',
-          borderRadius: 5,
-          borderSkipped: false
-        }]
-      },
+      data: { labels: mesesComDados, datasets: [{ data: totaisComDados, backgroundColor:'#1352a2', borderRadius:5, borderSkipped:false }] },
       options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: '#6b7585', font: { size: 10 } } },
-          y: { grid: { color: '#eaedf2' }, ticks: { color: '#6b7585', font: { size: 10 } }, beginAtZero: true }
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{display:false},ticks:{color:'#6b7585',font:{size:10}}},
+          y:{grid:{color:'#eaedf2'},ticks:{color:'#6b7585',font:{size:10}},beginAtZero:true}
         }
       }
     });
@@ -1266,24 +1225,46 @@ async function carregarTudo() {
   document.getElementById('sync-bar').textContent = '⏳ Atualizando dados...';
   document.getElementById('sidebar-sync').textContent = '⏳ Carregando...';
 
-  // Renderiza Financeiro imediatamente (dados embutidos)
+  // Financeiro: dados embutidos (imediato)
   renderFin();
 
-  // Tenta carregar tudo da API
   try {
     const r = await fetch(API_PSI);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const dados = await r.json();
 
-    renderInd(dados.INDICADORES || dados['INDICADORES'] || null);
-    renderProd(dados['PRODUTOS_CRÍTICOS'] || dados['PRODUTOS_CRITICOS'] || dados['PRODUTOS CRÍTICOS'] || null);
-    renderAquis(dados['AQUISIÇÕES'] || dados['AQUISICOES'] || null);
-    renderOrcamento(dados['ORÇAMENTO ORGÃO'] || dados['ORCAMENTO ORGAO'] || dados['ORÇAMENTO_ORGÃO'] || null);
-    renderCisternas(dados['ENTREGA DE CISTERNAS'] || dados['ENTREGA_DE_CISTERNAS'] || null);
-    renderPAP(dados['Perfil PAP'] || dados['PERFIL PAP'] || dados['perfil_pap'] || null);
+    // Registra chaves para debug
+    _apiKeys = Object.keys(dados);
+    console.log('[PSI-API] Chaves recebidas:', _apiKeys);
 
-    // Acordos: vem da chave ACORDO_GERAL_2026
-    const rawAcordos = dados['ACORDO_GERAL_2026'] || null;
+    // Usa findKey() — tolerante a acentos, espaços e maiúsculas
+    renderInd(
+      findKey(dados, 'INDICADORES')
+    );
+    renderProd(
+      findKey(dados, 'PRODUTOS_CRÍTICOS', 'PRODUTOS CRÍTICOS', 'PRODUTOS_CRITICOS', 'PRODUTOS CRITICOS')
+    );
+    renderAquis(
+      findKey(dados, 'AQUISIÇÕES', 'AQUISICOES')
+    );
+    renderOrcamento(
+      findKey(dados, 'ORÇAMENTO ORGÃO', 'ORÇAMENTO ÓRGÃO', 'ORCAMENTO ORGAO', 'ORÇAMENTO_ORGÃO', 'ORCAMENTO_ORGAO')
+    );
+    renderCisternas(
+      findKey(dados, 'ENTREGA DE CISTERNAS', 'ENTREGA_DE_CISTERNAS')
+    );
+    renderPAP(
+      findKey(dados, 'Perfil PAP', 'PERFIL PAP', 'perfil_pap', 'PERFIL_PAP')
+    );
+
+    // Acordos: aba "ACORDO GERAL- 2026" (nome exato da planilha)
+    const rawAcordos = findKey(dados,
+      'ACORDO GERAL- 2026',
+      'ACORDO GERAL-2026',
+      'ACORDO GERAL 2026',
+      'ACORDO_GERAL_2026',
+      'ACORDO_GERAL-2026'
+    );
     ACORDOS_DATA = rawAcordos ? parseAcordosRows(rawAcordos) : [];
     renderAcordos(filtroAtivo);
 
@@ -1303,13 +1284,14 @@ async function carregarTudo() {
       }
     });
     renderVisaoGeral(null);
-    document.getElementById('sync-bar').innerHTML = `⚠️ Financeiro: dados locais. API indisponível: <em>${e.message}</em>`;
+    document.getElementById('sync-bar').innerHTML =
+      `⚠️ Financeiro: dados locais. API indisponível: <em>${e.message}</em>`;
     document.getElementById('sidebar-sync').textContent = '⚠️ API indisponível';
   }
 }
 
-// Inicializa
 carregarTudo();
 </script>
 </body>
 </html>
+
