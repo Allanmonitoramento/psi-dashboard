@@ -1229,7 +1229,12 @@ function renderPAP(rows) {
   }
 }
 
-// ── ORÇAMENTO ÓRGÃO — BI consolidado ──
+// ── ORÇAMENTO ÓRGÃO — BI financeiro por órgão ──
+// Lê apenas as linhas "Componente 1", "Componente 2", "Componente 3"
+// Colunas por órgão: SEPLAN(2-5) · INTERPI(6-9) · SAF(10-13) · SEMARH(14-17)
+// Ordem dentro de cada bloco: Disponível · Comprometido · Executado · Saldo
+let chartOrc = null;
+
 function renderOrcamento(rows) {
   if (!rows || rows.length < 4) {
     document.getElementById('orcamento-content').outerHTML =
@@ -1237,105 +1242,176 @@ function renderOrcamento(rows) {
     return;
   }
 
-  const data      = rows.slice(2).filter(r => r[0] && String(r[0]).trim());
-  const compRows  = data.filter(r => String(r[0]).match(/^Componente \d/i));
+  const allData = rows.slice(2).filter(r => r[0] && String(r[0]).trim());
+
+  // Apenas as 3 linhas principais de componente (não sub-componentes)
+  const compRows = allData.filter(r =>
+    /^componente\s+[123]/i.test(String(r[0]).trim().normalize('NFD').replace(/[\u0300-\u036f]/g,''))
+  );
 
   const orgs = [
-    {nome:'SEPLAN',  cor:'#1352a2', ci:{disp:2, comp:3, exec:4}},
-    {nome:'INTERPI', cor:'#0e7c4a', ci:{disp:6, comp:7, exec:8}},
-    {nome:'SAF',     cor:'#d49000', ci:{disp:10,comp:11,exec:12}},
-    {nome:'SEMARH',  cor:'#7b3fa0', ci:{disp:14,comp:15,exec:16}},
+    {nome:'SEPLAN',  cor:'#1352a2', ci:{disp:2,  comp:3,  exec:4,  saldo:5}},
+    {nome:'INTERPI', cor:'#0e7c4a', ci:{disp:6,  comp:7,  exec:8,  saldo:9}},
+    {nome:'SAF',     cor:'#d49000', ci:{disp:10, comp:11, exec:12, saldo:13}},
+    {nome:'SEMARH',  cor:'#7b3fa0', ci:{disp:14, comp:15, exec:16, saldo:17}},
   ];
 
-  const parseV = v => parseFloat(String(v||'').replace(/[^\d.]/g,'')) || 0;
-  const fmtMi  = v => v >= 1000000
-    ? 'US$ ' + (v/1000000).toFixed(2).replace('.',',') + ' mi'
-    : v > 0 ? 'US$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:0}) : 'US$ 0';
+  const parseV = v => {
+    const n = parseFloat(String(v||'').replace(/\./g,'').replace(',','.').replace(/[^\d.\-]/g,''));
+    return isNaN(n) ? 0 : n;
+  };
+  const fmtUS = v => {
+    if (!v || v === 0) return 'US$ 0';
+    if (Math.abs(v) >= 1000000) return 'US$ ' + (v/1000000).toFixed(2).replace('.',',') + ' mi';
+    if (Math.abs(v) >= 1000)    return 'US$ ' + (v/1000).toFixed(1).replace('.',',') + ' mil';
+    return 'US$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:0});
+  };
 
-  let totalGeral = {disp:0, comp:0, exec:0};
+  // Totaliza por órgão somando os 3 componentes
+  let gDisp=0, gComp=0, gExec=0, gSaldo=0;
 
   const orgTotais = orgs.map(o => {
-    let disp=0, comp=0, exec=0;
+    let disp=0, comp=0, exec=0, saldo=0;
     compRows.forEach(r => {
-      disp += parseV(r[o.ci.disp]);
-      comp += parseV(r[o.ci.comp]);
-      exec += parseV(r[o.ci.exec]);
+      disp  += parseV(r[o.ci.disp]);
+      comp  += parseV(r[o.ci.comp]);
+      exec  += parseV(r[o.ci.exec]);
+      saldo += parseV(r[o.ci.saldo]);
     });
-    totalGeral.disp += disp;
-    totalGeral.comp += comp;
-    totalGeral.exec += exec;
-    return {...o, disp, comp, exec};
+    gDisp  += disp;
+    gComp  += comp;
+    gExec  += exec;
+    gSaldo += saldo;
+    return {...o, disp, comp, exec, saldo};
   });
 
+  const pCompG = gDisp > 0 ? gComp/gDisp : 0;
+  const pExecG = gDisp > 0 ? gExec/gDisp : 0;
+
+  // Cards por órgão
   const orgCards = orgTotais.map(o => {
-    const pComp = o.disp > 0 ? o.comp/o.disp : 0;
-    const pExec = o.disp > 0 ? o.exec/o.disp : 0;
+    const pComp  = o.disp > 0 ? o.comp/o.disp  : 0;
+    const pExec  = o.disp > 0 ? o.exec/o.disp  : 0;
+    const pSaldo = o.disp > 0 ? o.saldo/o.disp : 0;
+
+    const linha = (label, valor, perc, cor, altura='7px') => `
+      <div style="margin-bottom:13px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-bottom:4px">
+          <span style="color:var(--muted);font-weight:500">${label}</span>
+          <span>
+            <strong style="color:var(--text);font-size:12px">${fmtUS(valor)}</strong>
+            ${perc !== null ? `<span style="color:${cor};font-weight:700;margin-left:4px">${pct(perc)}</span>` : ''}
+          </span>
+        </div>
+        <div class="prog-wrap" style="height:${altura}">
+          <div class="prog-fill" style="width:${perc !== null ? Math.min(perc*100,100).toFixed(0) : 100}%;background:${cor}"></div>
+        </div>
+      </div>`;
+
     return `
     <div class="card" style="border-top:3px solid ${o.cor}">
       <div style="font-size:15px;font-weight:700;color:${o.cor};margin-bottom:16px">${o.nome}</div>
-
-      <div style="margin-bottom:14px">
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px">
-          <span>Disponível</span>
-          <span style="font-weight:700;color:var(--text)">${fmtMi(o.disp)}</span>
-        </div>
-        <div class="prog-wrap" style="height:7px">
-          <div class="prog-fill" style="width:100%;background:#dde3ef"></div>
-        </div>
-      </div>
-
-      <div style="margin-bottom:14px">
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px">
-          <span>Comprometido</span>
-          <span><strong style="color:var(--text)">${fmtMi(o.comp)}</strong> <span style="color:${o.cor};font-weight:700">${pct(pComp)}</span></span>
-        </div>
-        <div class="prog-wrap" style="height:7px">
-          <div class="prog-fill" style="width:${Math.min(pComp*100,100).toFixed(0)}%;background:${o.cor}88"></div>
-        </div>
-      </div>
-
-      <div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px">
-          <span>Executado</span>
-          <span><strong style="color:var(--text)">${fmtMi(o.exec)}</strong> <span style="color:${o.cor};font-weight:700">${pct(pExec)}</span></span>
-        </div>
-        <div class="prog-wrap" style="height:7px">
-          <div class="prog-fill" style="width:${Math.min(pExec*100,100).toFixed(0)}%;background:${o.cor}"></div>
-        </div>
+      ${linha('Disponível',   o.disp,  null,  '#dde3ef', '6px')}
+      ${linha('Comprometido', o.comp,  pComp, o.cor+'99')}
+      ${linha('Executado',    o.exec,  pExec, o.cor)}
+      <div style="display:flex;justify-content:space-between;align-items:center;
+                  padding:8px 10px;background:${o.cor}10;border-radius:6px;margin-top:4px">
+        <span style="font-size:11px;color:var(--muted);font-weight:500">Saldo disponível</span>
+        <span style="font-size:13px;font-weight:700;color:${o.saldo>=0?'var(--green)':'var(--red)'}">${fmtUS(o.saldo)}</span>
       </div>
     </div>`;
   }).join('');
 
-  const pCompG = totalGeral.disp > 0 ? totalGeral.comp/totalGeral.disp : 0;
-  const pExecG = totalGeral.disp > 0 ? totalGeral.exec/totalGeral.disp : 0;
-
+  // Gráfico de barras comparativo (comprometido vs executado)
   document.getElementById('orcamento-content').outerHTML = `
   <div id="orcamento-content">
 
-    <!-- KPIs consolidados -->
+    <!-- KPIs consolidados do projeto -->
     <div class="kpi-grid">
       <div class="kpi-card kpi-blue">
         <div class="kpi-label">Total disponível</div>
-        <div class="kpi-value" style="font-size:17px">${fmtMi(totalGeral.disp)}</div>
-        <div class="kpi-sub">Todas as secretarias</div>
+        <div class="kpi-value" style="font-size:16px">${fmtUS(gDisp)}</div>
+        <div class="kpi-sub">Comp. 1 + 2 + 3 · todos os órgãos</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Comprometido</div>
-        <div class="kpi-value" style="font-size:17px">${fmtMi(totalGeral.comp)}</div>
+        <div class="kpi-value" style="font-size:16px">${fmtUS(gComp)}</div>
         <div class="kpi-sub">${pct(pCompG)} do disponível</div>
       </div>
       <div class="kpi-card kpi-green">
         <div class="kpi-label">Executado</div>
-        <div class="kpi-value" style="font-size:17px">${fmtMi(totalGeral.exec)}</div>
+        <div class="kpi-value" style="font-size:16px">${fmtUS(gExec)}</div>
         <div class="kpi-sub">${pct(pExecG)} do disponível</div>
+      </div>
+      <div class="kpi-card ${gSaldo >= 0 ? 'kpi-green' : 'kpi-red'}">
+        <div class="kpi-label">Saldo total</div>
+        <div class="kpi-value" style="font-size:16px">${fmtUS(gSaldo)}</div>
+        <div class="kpi-sub">Disponível − Comprometido</div>
       </div>
     </div>
 
-    <!-- Cards por órgão — 2 × 2 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <!-- Cards 2 × 2 por órgão -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
       ${orgCards}
     </div>
+
+    <!-- Gráfico comparativo -->
+    <div class="card">
+      <div class="card-title">Comparativo por órgão — Disponível · Comprometido · Executado (US$)</div>
+      <div class="chart-wrap" style="height:240px">
+        <canvas id="chart-orc"></canvas>
+      </div>
+    </div>
+
   </div>`;
+
+  // Renderiza gráfico
+  if (chartOrc) { chartOrc.destroy(); chartOrc = null; }
+  chartOrc = new Chart(document.getElementById('chart-orc'), {
+    type: 'bar',
+    data: {
+      labels: orgTotais.map(o => o.nome),
+      datasets: [
+        {
+          label: 'Disponível',
+          data: orgTotais.map(o => o.disp),
+          backgroundColor: orgTotais.map(o => o.cor + '33'),
+          borderColor:     orgTotais.map(o => o.cor),
+          borderWidth: 1, borderRadius: 4
+        },
+        {
+          label: 'Comprometido',
+          data: orgTotais.map(o => o.comp),
+          backgroundColor: orgTotais.map(o => o.cor + '88'),
+          borderWidth: 0, borderRadius: 4
+        },
+        {
+          label: 'Executado',
+          data: orgTotais.map(o => o.exec),
+          backgroundColor: orgTotais.map(o => o.cor),
+          borderWidth: 0, borderRadius: 4
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font:{size:11}, padding:14 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${fmtUS(ctx.parsed.y)}`
+          }
+        }
+      },
+      scales: {
+        x: { grid:{display:false}, ticks:{color:'#6b7585',font:{size:11}} },
+        y: {
+          grid:{color:'#eaedf2'},
+          ticks:{color:'#6b7585', font:{size:10}, callback: v => 'US$'+(v/1e6).toFixed(1)+'mi'}
+        }
+      }
+    }
+  });
 }
 
 // ── ENTREGA DE CISTERNAS ──
