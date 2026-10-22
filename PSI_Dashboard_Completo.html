@@ -1041,46 +1041,21 @@ function renderPAP(rows) {
   const header = rows[headerIdx] || [];
   const data   = rows.slice(headerIdx + 1).filter(r => r.some(c => c && String(c).trim()));
 
-  // Localiza colunas por nome
-  const col = (...kws) => {
-    for (const kw of kws) {
-      const i = header.findIndex(h => norm(h).includes(norm(kw)));
-      if (i >= 0) return i;
-    }
-    return -1;
-  };
-
-  const iMun   = col('municipio','município');
-  const iAtiv  = col('atividade produtiva','atividade');
-  const iFam   = col('familias','famílias','familia');
-  const iMul   = col('mulheres','mulher');
-  const iJov   = col('jovens','jovem','juventude');
-  const iQui   = col('quilombola');
-  const iValEst= col('valor estimado','valor est');
-  const iValRep= col('valor do primeiro repasse','primeiro repasse');
-
   // Converte qualquer formato numérico BR para float
-  // Suporta: "30", "1.234", "1.234,56", "R$ 65.571.000,00"
   const toFloat = v => {
     let s = String(v||'').trim().replace(/R\$\s*/i,'').trim();
     if (!s) return 0;
-    // Tem vírgula como decimal: "1.234,56" ou "247.500,00"
     if (s.includes(',')) return parseFloat(s.replace(/\./g,'').replace(',','.')) || 0;
-    // Número inteiro puro: "30", "7948"
     if (/^\d+$/.test(s)) return parseInt(s, 10) || 0;
-    // Separador de milhar sem decimal: "1.234" (3 dígitos após ponto)
     if (/^\d{1,3}(\.\d{3})+$/.test(s)) return parseFloat(s.replace(/\./g,'')) || 0;
     return parseFloat(s) || 0;
   };
 
-  // Identifica linha de TOTAL (coluna Município ou LOTE diz "TOTAL")
-  const isTotalRow = r => {
-    const t = String(r[0]||'').trim().toUpperCase();
-    const t1 = String(r[1]||'').trim().toUpperCase();
-    const t2 = String(r[2]||'').trim().toUpperCase();
-    return t === 'TOTAL' || t1 === 'TOTAL' || t2 === 'TOTAL' ||
-           t.startsWith('TOTAL') || t1.startsWith('TOTAL') || t2.startsWith('TOTAL');
-  };
+  // Identifica linha de TOTAL — busca em QUALQUER célula da linha
+  const isTotalRow = r => r.some(c => {
+    const t = String(c||'').trim().toUpperCase();
+    return t === 'TOTAL' || t === 'TOTAIS' || t === 'TOTAL GERAL';
+  });
 
   const totalRowData = rows.find(isTotalRow);
 
@@ -1089,19 +1064,42 @@ function renderPAP(rows) {
     r.some(c => c && String(c).trim()) && !isTotalRow(r)
   );
 
-  // Soma coluna (usado como fallback se não houver linha TOTAL)
-  const somaCol = (i, arr) => {
+  // Soma coluna nas linhas de dados (fallback)
+  const somaCol = i => {
     if (i < 0) return 0;
-    return (arr || dataRows).reduce((s, r) => s + toFloat(r[i]), 0);
+    return dataRows.reduce((s, r) => s + toFloat(r[i]), 0);
   };
 
-  // Usa linha de TOTAL se disponível; senão soma as linhas de dados
-  const totalFam = totalRowData ? toFloat(totalRowData[iFam]) : somaCol(iFam);
-  const totalMul = totalRowData ? toFloat(totalRowData[iMul]) : somaCol(iMul);
-  const totalJov = totalRowData ? toFloat(totalRowData[iJov]) : somaCol(iJov);
-  const totalQui = totalRowData ? toFloat(totalRowData[iQui]) : somaCol(iQui);
-  const totalVal = totalRowData ? toFloat(totalRowData[iValEst]) : somaCol(iValEst);
-  const totalRep = totalRowData ? toFloat(totalRowData[iValRep]) : somaCol(iValRep);
+  // Localiza colunas por nome no cabeçalho
+  const col = (...kws) => {
+    for (const kw of kws) {
+      const i = header.findIndex(h => norm(h).includes(norm(kw)));
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+
+  const iMun    = col('municipio','município');
+  const iAtiv   = col('atividade produtiva','atividade');
+  const iMul    = col('mulheres','mulher');
+  const iJov    = col('jovens','jovem','juventude');
+  const iQui    = col('quilombola');
+  const iValEst = col('valor estimado','valor est');
+  const iValRep = col('valor do primeiro repasse','primeiro repasse');
+
+  // Famílias: tenta várias variantes de nome; fallback = coluna antes de Mulheres
+  let iFam = col('total de familias','familias beneficiarias','total familias',
+                 'familias','famílias','familia','beneficiarias','beneficiários');
+  if (iFam < 0) iFam = iMul > 0 ? iMul - 1 : 3;
+
+  // Valores para KPIs: usa linha de TOTAL se existir, senão soma as linhas
+  const getVal = (row, i) => (row && i >= 0) ? toFloat(row[i]) : 0;
+  const totalFam = totalRowData ? getVal(totalRowData, iFam)   : somaCol(iFam);
+  const totalMul = totalRowData ? getVal(totalRowData, iMul)   : somaCol(iMul);
+  const totalJov = totalRowData ? getVal(totalRowData, iJov)   : somaCol(iJov);
+  const totalQui = totalRowData ? getVal(totalRowData, iQui)   : somaCol(iQui);
+  const totalVal = totalRowData ? getVal(totalRowData, iValEst): somaCol(iValEst);
+  const totalRep = totalRowData ? getVal(totalRowData, iValRep): somaCol(iValRep);
 
   // % sempre em relação ao total de famílias
   const base = totalFam > 0 ? totalFam : 1;
@@ -1703,5 +1701,3 @@ carregarTudo();
 </script>
 </body>
 </html>
-
-
