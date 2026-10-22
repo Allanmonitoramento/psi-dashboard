@@ -1059,13 +1059,24 @@ function renderPAP(rows) {
   const iValEst= col('valor estimado','valor est');
   const iValRep= col('valor do primeiro repasse','primeiro repasse');
 
-  // Função para somar coluna numérica
+  // Converte qualquer formato numérico (BR ou US) para float
+  const toFloat = v => {
+    const s = String(v||'').trim();
+    if (!s) return 0;
+    // Formato BR: 1.234,56 → remove ponto, troca vírgula
+    if (/^\d{1,3}(\.\d{3})+(,\d*)?$/.test(s))
+      return parseFloat(s.replace(/\./g,'').replace(',','.')) || 0;
+    // Formato simples com vírgula decimal: 1234,56
+    if (/^\d+(,\d+)?$/.test(s))
+      return parseFloat(s.replace(',','.')) || 0;
+    // Fallback: remove tudo que não é dígito, ponto ou hífen
+    return parseFloat(s.replace(/[^\d.\-]/g,'')) || 0;
+  };
+
+  // Soma todos os valores de uma coluna nas linhas de dados
   const somaCol = i => {
     if (i < 0) return 0;
-    return data.reduce((s, r) => {
-      const v = parseFloat(String(r[i]||'').replace(/\./g,'').replace(',','.').replace(/[^\d.]/g,''));
-      return s + (isNaN(v) ? 0 : v);
-    }, 0);
+    return data.reduce((s, r) => s + toFloat(r[i]), 0);
   };
 
   const totalFam  = somaCol(iFam);
@@ -1075,9 +1086,11 @@ function renderPAP(rows) {
   const totalVal  = somaCol(iValEst);
   const totalRep  = somaCol(iValRep);
 
-  const pMul = totalFam > 0 ? totalMul/totalFam : 0;
-  const pJov = totalFam > 0 ? totalJov/totalFam : 0;
-  const pQui = totalFam > 0 ? totalQui/totalFam : 0;
+  // Usa totalFam como base; se ainda vier 0, usa o maior grupo como referência
+  const base = totalFam > 0 ? totalFam : Math.max(totalMul, totalJov, totalQui, 1);
+  const pMul = totalMul / base;
+  const pJov = totalJov / base;
+  const pQui = totalQui / base;
 
   // Agrupa por atividade produtiva (soma famílias)
   const ativMap = {};
@@ -1122,21 +1135,22 @@ function renderPAP(rows) {
       <div class="kpi-card kpi-blue">
         <div class="kpi-label">Famílias beneficiárias</div>
         <div class="kpi-value">${totalFam.toLocaleString('pt-BR')}</div>
+        <div class="kpi-sub">${totalFam > 0 ? 'soma da coluna' : 'coluna zerada — usando maior grupo como base'}</div>
       </div>
       <div class="kpi-card" style="border-left:3px solid #e0417a">
         <div class="kpi-label" style="color:#b5185a">👩 Mulheres</div>
         <div class="kpi-value" style="color:#b5185a">${totalMul.toLocaleString('pt-BR')}</div>
-        <div class="kpi-sub">${pct(pMul)} do total</div>
+        <div class="kpi-sub">${pct(pMul)} das famílias</div>
       </div>
       <div class="kpi-card" style="border-left:3px solid #d49000">
         <div class="kpi-label" style="color:#9a5d00">🌱 Jovens</div>
         <div class="kpi-value" style="color:#9a5d00">${totalJov.toLocaleString('pt-BR')}</div>
-        <div class="kpi-sub">${pct(pJov)} do total</div>
+        <div class="kpi-sub">${pct(pJov)} das famílias</div>
       </div>
       <div class="kpi-card" style="border-left:3px solid #7b3fa0">
         <div class="kpi-label" style="color:#7b3fa0">🌍 Quilombolas</div>
         <div class="kpi-value" style="color:#7b3fa0">${totalQui.toLocaleString('pt-BR')}</div>
-        <div class="kpi-sub">${pct(pQui)} do total</div>
+        <div class="kpi-sub">${pct(pQui)} das famílias</div>
       </div>
       ${totalVal > 0 ? `<div class="kpi-card">
         <div class="kpi-label">Valor estimado total</div>
@@ -1150,7 +1164,7 @@ function renderPAP(rows) {
 
     <!-- Recortes de equidade -->
     <div class="card">
-      <div class="card-title">Recortes de equidade — % sobre total de famílias</div>
+      <div class="card-title">Recortes de equidade — % sobre ${totalFam > 0 ? totalFam.toLocaleString('pt-BR')+' famílias beneficiárias' : 'maior grupo (total de famílias = 0)'}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;padding:8px 0">
         ${[
           {label:'👩 Mulheres',      n:totalMul, p:pMul, cor:'#e0417a'},
@@ -1672,4 +1686,5 @@ carregarTudo();
 </script>
 </body>
 </html>
+
 
