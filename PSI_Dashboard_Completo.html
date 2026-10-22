@@ -1011,6 +1011,13 @@ function renderAquis(rows) {
 }
 
 // ── PERFIL PAP — BI com recortes de equidade ──
+// Estrutura da planilha:
+// Col 0: LOTE | 1: Município | 2: Atividade Produtiva
+// Col 3: Total de Famílias Beneficiárias | 4: Total de Mulheres
+// Col 5: Total de Jovens | 6: Total de Quilombolas
+// Col 7: Valor Estimado Total R$ | 9: Valor do primeiro repasse R$
+let chartPAP = null;
+
 function renderPAP(rows) {
   const temDados = rows && rows.length > 3 && rows.slice(3).some(r => r.some(c => c && String(c).trim()));
   if (!temDados) {
@@ -1027,142 +1034,199 @@ function renderPAP(rows) {
     return;
   }
 
-  // Detecta cabeçalho e dados
-  const headerRow = rows[2] || rows[1] || [];
-  const data = rows.slice(3).filter(r => r.some(c => c && String(c).trim()));
-
-  // Encontra coluna por palavra-chave (ignora acentos e maiúsculas)
+  // Detecta cabeçalho — procura a linha com "Município" ou "LOTE"
   const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  const findCol = (...kws) => {
+  let headerIdx = rows.findIndex(r => r.some(c => norm(c).includes('municipio') || norm(c).includes('lote')));
+  if (headerIdx < 0) headerIdx = 1;
+  const header = rows[headerIdx] || [];
+  const data   = rows.slice(headerIdx + 1).filter(r => r.some(c => c && String(c).trim()));
+
+  // Localiza colunas por nome
+  const col = (...kws) => {
     for (const kw of kws) {
-      const idx = headerRow.findIndex(h => norm(h).includes(norm(kw)));
-      if (idx >= 0) return idx;
+      const i = header.findIndex(h => norm(h).includes(norm(kw)));
+      if (i >= 0) return i;
     }
     return -1;
   };
 
-  const iMun   = findCol('municipio','município');
-  const iSexo  = findCol('sexo','genero','gênero');
-  const iJov   = findCol('juventude','jovem');
-  const iQui   = findCol('quilombola','quilombo');
-  const iAtiv  = findCol('atividade produtiva','atividade','prod');
-  const iIdade = findCol('nasc','idade');
+  const iMun   = col('municipio','município');
+  const iAtiv  = col('atividade produtiva','atividade');
+  const iFam   = col('familias','famílias','familia');
+  const iMul   = col('mulheres','mulher');
+  const iJov   = col('jovens','jovem','juventude');
+  const iQui   = col('quilombola');
+  const iValEst= col('valor estimado','valor est');
+  const iValRep= col('valor do primeiro repasse','primeiro repasse');
 
-  const total = data.length;
-  let nMulheres = 0, nJovens = 0, nQuilombolas = 0;
-  const munMap = {}, ativMap = {};
+  // Função para somar coluna numérica
+  const somaCol = i => {
+    if (i < 0) return 0;
+    return data.reduce((s, r) => {
+      const v = parseFloat(String(r[i]||'').replace(/\./g,'').replace(',','.').replace(/[^\d.]/g,''));
+      return s + (isNaN(v) ? 0 : v);
+    }, 0);
+  };
 
+  const totalFam  = somaCol(iFam);
+  const totalMul  = somaCol(iMul);
+  const totalJov  = somaCol(iJov);
+  const totalQui  = somaCol(iQui);
+  const totalVal  = somaCol(iValEst);
+  const totalRep  = somaCol(iValRep);
+
+  const pMul = totalFam > 0 ? totalMul/totalFam : 0;
+  const pJov = totalFam > 0 ? totalJov/totalFam : 0;
+  const pQui = totalFam > 0 ? totalQui/totalFam : 0;
+
+  // Agrupa por atividade produtiva (soma famílias)
+  const ativMap = {};
   data.forEach(r => {
-    // Mulheres
-    if (iSexo >= 0) {
-      const v = norm(r[iSexo]||'');
-      if (v === 'f' || v.includes('femin') || v.includes('mulher')) nMulheres++;
-    }
-    // Juventude (coluna direta ou por data de nascimento)
-    if (iJov >= 0) {
-      const v = norm(r[iJov]||'');
-      if (v === 'sim' || v === 's' || v === 'x') nJovens++;
-    } else if (iIdade >= 0) {
-      const dn = String(r[iIdade]||'').trim();
-      const p  = dn.split(/[\/\-]/);
-      if (p.length >= 3) {
-        const ano = parseInt(p[2]) > 1900 ? parseInt(p[2]) : 2000 + parseInt(p[2]||0);
-        const idade = 2026 - ano;
-        if (idade >= 15 && idade <= 29) nJovens++;
-      }
-    }
-    // Quilombolas
-    if (iQui >= 0) {
-      const v = norm(r[iQui]||'');
-      if (v === 'sim' || v === 's' || v === 'x') nQuilombolas++;
-    }
-    // Município
-    if (iMun >= 0) {
-      const m = String(r[iMun]||'').trim();
-      if (m) munMap[m] = (munMap[m]||0) + 1;
-    }
-    // Atividade
-    if (iAtiv >= 0) {
-      const a = String(r[iAtiv]||'').trim();
-      if (a) ativMap[a] = (ativMap[a]||0) + 1;
-    }
+    const a = String(r[iAtiv]||'').trim();
+    const v = iFam >= 0 ? (parseFloat(String(r[iFam]||'0').replace(/\./g,'').replace(',','.').replace(/[^\d.]/g,'')) || 0) : 1;
+    if (a) ativMap[a] = (ativMap[a]||0) + v;
   });
+  const topAtiv = Object.entries(ativMap).sort((a,b)=>b[1]-a[1]);
+  const totalAtiv = topAtiv.reduce((s,[,v])=>s+v,0);
 
-  const pMul = total > 0 ? nMulheres/total : 0;
-  const pJov = total > 0 ? nJovens/total   : 0;
-  const pQui = total > 0 ? nQuilombolas/total : 0;
+  // Agrupa por município (soma famílias)
+  const munMap = {};
+  data.forEach(r => {
+    const m = String(r[iMun]||'').trim();
+    const v = iFam >= 0 ? (parseFloat(String(r[iFam]||'0').replace(/\./g,'').replace(',','.').replace(/[^\d.]/g,'')) || 0) : 1;
+    if (m) munMap[m] = (munMap[m]||0) + v;
+  });
+  const topMun = Object.entries(munMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const maxMun = topMun[0]?.[1] || 1;
 
-  const topMun  = Object.entries(munMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const topAtiv = Object.entries(ativMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  const maxMun  = topMun[0]?.[1]  || 1;
-  const maxAtiv = topAtiv[0]?.[1] || 1;
+  // Cores para o gráfico de atividades
+  const coresGraf = ['#1352a2','#0e7c4a','#d49000','#e03c3f','#7b3fa0','#e0417a','#00838f','#5c6bc0','#ef6c00','#2e7d32','#c62828','#4527a0'];
 
-  const barList = (items, max, cor) => items.map(([nome, qtd]) => `
+  // Barras de município
+  const munBars = topMun.map(([nome, qtd]) => `
     <div style="margin-bottom:9px">
       <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
         <span style="font-weight:500;color:var(--text)">${nome}</span>
-        <span style="color:var(--muted)">${qtd} <span style="font-weight:700;color:${cor}">${total>0?pct(qtd/total):''}</span></span>
+        <span style="color:var(--muted)">${qtd.toLocaleString('pt-BR')} fam. <span style="font-weight:700;color:#1352a2">${totalFam>0?pct(qtd/totalFam):''}</span></span>
       </div>
       <div class="prog-wrap" style="height:6px">
-        <div class="prog-fill" style="width:${(qtd/max*100).toFixed(0)}%;background:${cor}"></div>
+        <div class="prog-fill" style="width:${(qtd/maxMun*100).toFixed(0)}%;background:#1352a2"></div>
       </div>
     </div>`).join('');
-
-  const munSection  = topMun.length  > 0 ? `<div class="card"><div class="card-title">Por município (top ${topMun.length})</div>${barList(topMun,maxMun,'#1352a2')}</div>` : '';
-  const ativSection = topAtiv.length > 0 ? `<div class="card"><div class="card-title">Por atividade produtiva</div>${barList(topAtiv,maxAtiv,'#0e7c4a')}</div>` : '';
-  const semColuna   = (iMun<0 && iAtiv<0) ? `<div class="card"><div style="color:var(--muted);font-size:12px;padding:8px">Colunas de Município e Atividade não identificadas no cabeçalho da planilha.</div></div>` : '';
 
   document.getElementById('pap-content').outerHTML = `
   <div id="pap-content">
 
-    <!-- KPIs principais -->
+    <!-- KPIs -->
     <div class="kpi-grid">
       <div class="kpi-card kpi-blue">
-        <div class="kpi-label">Total de beneficiários</div>
-        <div class="kpi-value">${total.toLocaleString('pt-BR')}</div>
+        <div class="kpi-label">Famílias beneficiárias</div>
+        <div class="kpi-value">${totalFam.toLocaleString('pt-BR')}</div>
       </div>
       <div class="kpi-card" style="border-left:3px solid #e0417a">
         <div class="kpi-label" style="color:#b5185a">👩 Mulheres</div>
-        <div class="kpi-value" style="color:#b5185a">${nMulheres.toLocaleString('pt-BR')}</div>
+        <div class="kpi-value" style="color:#b5185a">${totalMul.toLocaleString('pt-BR')}</div>
         <div class="kpi-sub">${pct(pMul)} do total</div>
       </div>
       <div class="kpi-card" style="border-left:3px solid #d49000">
-        <div class="kpi-label" style="color:#9a5d00">🌱 Juventude</div>
-        <div class="kpi-value" style="color:#9a5d00">${nJovens.toLocaleString('pt-BR')}</div>
-        <div class="kpi-sub">${pct(pJov)} · 15–29 anos</div>
+        <div class="kpi-label" style="color:#9a5d00">🌱 Jovens</div>
+        <div class="kpi-value" style="color:#9a5d00">${totalJov.toLocaleString('pt-BR')}</div>
+        <div class="kpi-sub">${pct(pJov)} do total</div>
       </div>
       <div class="kpi-card" style="border-left:3px solid #7b3fa0">
         <div class="kpi-label" style="color:#7b3fa0">🌍 Quilombolas</div>
-        <div class="kpi-value" style="color:#7b3fa0">${nQuilombolas.toLocaleString('pt-BR')}</div>
+        <div class="kpi-value" style="color:#7b3fa0">${totalQui.toLocaleString('pt-BR')}</div>
         <div class="kpi-sub">${pct(pQui)} do total</div>
       </div>
+      ${totalVal > 0 ? `<div class="kpi-card">
+        <div class="kpi-label">Valor estimado total</div>
+        <div class="kpi-value" style="font-size:15px">${brl(totalVal)}</div>
+      </div>` : ''}
+      ${totalRep > 0 ? `<div class="kpi-card">
+        <div class="kpi-label">1º repasse previsto</div>
+        <div class="kpi-value" style="font-size:15px">${brl(totalRep)}</div>
+      </div>` : ''}
     </div>
 
-    <!-- Recortes visuais -->
+    <!-- Recortes de equidade -->
     <div class="card">
-      <div class="card-title">Recortes de equidade</div>
+      <div class="card-title">Recortes de equidade — % sobre total de famílias</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;padding:8px 0">
         ${[
-          {label:'👩 Mulheres', n:nMulheres, p:pMul, cor:'#e0417a'},
-          {label:'🌱 Juventude (15–29)', n:nJovens, p:pJov, cor:'#d49000'},
-          {label:'🌍 Quilombolas', n:nQuilombolas, p:pQui, cor:'#7b3fa0'}
+          {label:'👩 Mulheres',      n:totalMul, p:pMul, cor:'#e0417a'},
+          {label:'🌱 Jovens',        n:totalJov, p:pJov, cor:'#d49000'},
+          {label:'🌍 Quilombolas',   n:totalQui, p:pQui, cor:'#7b3fa0'}
         ].map(x => `
           <div style="text-align:center">
-            <div style="font-size:36px;font-weight:700;color:${x.cor};line-height:1">${pct(x.p,0)}</div>
+            <div style="font-size:38px;font-weight:700;color:${x.cor};line-height:1">${pct(x.p,1)}</div>
             <div style="font-size:12px;font-weight:600;color:${x.cor};margin:4px 0 2px">${x.n.toLocaleString('pt-BR')} pessoas</div>
             <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${x.label}</div>
-            <div class="prog-wrap" style="height:7px;border-radius:4px">
-              <div class="prog-fill" style="width:${(x.p*100).toFixed(0)}%;background:${x.cor};border-radius:4px"></div>
+            <div class="prog-wrap" style="height:7px">
+              <div class="prog-fill" style="width:${Math.min(x.p*100,100).toFixed(0)}%;background:${x.cor}"></div>
             </div>
           </div>`).join('')}
       </div>
     </div>
 
-    <!-- Distribuições -->
+    <!-- Gráfico de atividades + Municípios -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-      ${munSection}${ativSection}${semColuna}
+
+      <div class="card">
+        <div class="card-title">Atividades produtivas — distribuição de famílias</div>
+        <div class="chart-wrap" style="height:260px">
+          <canvas id="chart-pap-ativ"></canvas>
+        </div>
+        <!-- Legenda manual -->
+        <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">
+          ${topAtiv.map(([nome,],i) => `
+            <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)">
+              <span style="width:8px;height:8px;border-radius:2px;background:${coresGraf[i%coresGraf.length]};display:inline-block"></span>
+              ${nome}
+            </span>`).join('')}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Por município — famílias beneficiárias (top ${topMun.length})</div>
+        ${munBars || '<div style="color:var(--muted);font-size:12px">Coluna Município não identificada.</div>'}
+      </div>
+
     </div>
   </div>`;
+
+  // Renderiza gráfico de atividades (doughnut)
+  if (chartPAP) { chartPAP.destroy(); chartPAP = null; }
+  if (topAtiv.length > 0) {
+    chartPAP = new Chart(document.getElementById('chart-pap-ativ'), {
+      type: 'doughnut',
+      data: {
+        labels: topAtiv.map(([nome, qtd]) => `${nome} (${totalAtiv>0?pct(qtd/totalAtiv,0):''})`),
+        datasets: [{
+          data: topAtiv.map(([,v]) => v),
+          backgroundColor: topAtiv.map((_,i) => coresGraf[i % coresGraf.length]),
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '55%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v = ctx.parsed;
+                const p = totalAtiv > 0 ? (v/totalAtiv*100).toFixed(1)+'%' : '';
+                return ` ${v.toLocaleString('pt-BR')} famílias (${p})`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
 }
 
 // ── ORÇAMENTO ÓRGÃO — BI consolidado ──
