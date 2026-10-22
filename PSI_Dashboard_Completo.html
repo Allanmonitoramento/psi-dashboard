@@ -1010,9 +1010,9 @@ function renderAquis(rows) {
   </div>`;
 }
 
-// ── PERFIL PAP ──
+// ── PERFIL PAP — BI com recortes de equidade ──
 function renderPAP(rows) {
-  const temDados = rows && rows.slice(3).some(r => r.some(c => c && String(c).trim()));
+  const temDados = rows && rows.length > 3 && rows.slice(3).some(r => r.some(c => c && String(c).trim()));
   if (!temDados) {
     document.getElementById('pap-content').outerHTML = `
     <div id="pap-content">
@@ -1026,91 +1026,250 @@ function renderPAP(rows) {
     </div>`;
     return;
   }
-  const header = rows[2] || [];
+
+  // Detecta cabeçalho e dados
+  const headerRow = rows[2] || rows[1] || [];
   const data = rows.slice(3).filter(r => r.some(c => c && String(c).trim()));
-  const thCols = header.filter(h => h).map(h => `<th>${h}</th>`).join('');
-  const trRows = data.map(r => `<tr>${header.map((_,i) => `<td>${r[i]||'—'}</td>`).join('')}</tr>`).join('');
+
+  // Encontra coluna por palavra-chave (ignora acentos e maiúsculas)
+  const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const findCol = (...kws) => {
+    for (const kw of kws) {
+      const idx = headerRow.findIndex(h => norm(h).includes(norm(kw)));
+      if (idx >= 0) return idx;
+    }
+    return -1;
+  };
+
+  const iMun   = findCol('municipio','município');
+  const iSexo  = findCol('sexo','genero','gênero');
+  const iJov   = findCol('juventude','jovem');
+  const iQui   = findCol('quilombola','quilombo');
+  const iAtiv  = findCol('atividade produtiva','atividade','prod');
+  const iIdade = findCol('nasc','idade');
+
+  const total = data.length;
+  let nMulheres = 0, nJovens = 0, nQuilombolas = 0;
+  const munMap = {}, ativMap = {};
+
+  data.forEach(r => {
+    // Mulheres
+    if (iSexo >= 0) {
+      const v = norm(r[iSexo]||'');
+      if (v === 'f' || v.includes('femin') || v.includes('mulher')) nMulheres++;
+    }
+    // Juventude (coluna direta ou por data de nascimento)
+    if (iJov >= 0) {
+      const v = norm(r[iJov]||'');
+      if (v === 'sim' || v === 's' || v === 'x') nJovens++;
+    } else if (iIdade >= 0) {
+      const dn = String(r[iIdade]||'').trim();
+      const p  = dn.split(/[\/\-]/);
+      if (p.length >= 3) {
+        const ano = parseInt(p[2]) > 1900 ? parseInt(p[2]) : 2000 + parseInt(p[2]||0);
+        const idade = 2026 - ano;
+        if (idade >= 15 && idade <= 29) nJovens++;
+      }
+    }
+    // Quilombolas
+    if (iQui >= 0) {
+      const v = norm(r[iQui]||'');
+      if (v === 'sim' || v === 's' || v === 'x') nQuilombolas++;
+    }
+    // Município
+    if (iMun >= 0) {
+      const m = String(r[iMun]||'').trim();
+      if (m) munMap[m] = (munMap[m]||0) + 1;
+    }
+    // Atividade
+    if (iAtiv >= 0) {
+      const a = String(r[iAtiv]||'').trim();
+      if (a) ativMap[a] = (ativMap[a]||0) + 1;
+    }
+  });
+
+  const pMul = total > 0 ? nMulheres/total : 0;
+  const pJov = total > 0 ? nJovens/total   : 0;
+  const pQui = total > 0 ? nQuilombolas/total : 0;
+
+  const topMun  = Object.entries(munMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const topAtiv = Object.entries(ativMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const maxMun  = topMun[0]?.[1]  || 1;
+  const maxAtiv = topAtiv[0]?.[1] || 1;
+
+  const barList = (items, max, cor) => items.map(([nome, qtd]) => `
+    <div style="margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+        <span style="font-weight:500;color:var(--text)">${nome}</span>
+        <span style="color:var(--muted)">${qtd} <span style="font-weight:700;color:${cor}">${total>0?pct(qtd/total):''}</span></span>
+      </div>
+      <div class="prog-wrap" style="height:6px">
+        <div class="prog-fill" style="width:${(qtd/max*100).toFixed(0)}%;background:${cor}"></div>
+      </div>
+    </div>`).join('');
+
+  const munSection  = topMun.length  > 0 ? `<div class="card"><div class="card-title">Por município (top ${topMun.length})</div>${barList(topMun,maxMun,'#1352a2')}</div>` : '';
+  const ativSection = topAtiv.length > 0 ? `<div class="card"><div class="card-title">Por atividade produtiva</div>${barList(topAtiv,maxAtiv,'#0e7c4a')}</div>` : '';
+  const semColuna   = (iMun<0 && iAtiv<0) ? `<div class="card"><div style="color:var(--muted);font-size:12px;padding:8px">Colunas de Município e Atividade não identificadas no cabeçalho da planilha.</div></div>` : '';
+
   document.getElementById('pap-content').outerHTML = `
   <div id="pap-content">
-    <div class="card">
-      <div class="card-title">Perfil dos Participantes do Programa (PAP)</div>
-      <div style="overflow-x:auto">
-        <table class="tbl">
-          <thead><tr>${thCols}</tr></thead>
-          <tbody>${trRows}</tbody>
-        </table>
+
+    <!-- KPIs principais -->
+    <div class="kpi-grid">
+      <div class="kpi-card kpi-blue">
+        <div class="kpi-label">Total de beneficiários</div>
+        <div class="kpi-value">${total.toLocaleString('pt-BR')}</div>
       </div>
+      <div class="kpi-card" style="border-left:3px solid #e0417a">
+        <div class="kpi-label" style="color:#b5185a">👩 Mulheres</div>
+        <div class="kpi-value" style="color:#b5185a">${nMulheres.toLocaleString('pt-BR')}</div>
+        <div class="kpi-sub">${pct(pMul)} do total</div>
+      </div>
+      <div class="kpi-card" style="border-left:3px solid #d49000">
+        <div class="kpi-label" style="color:#9a5d00">🌱 Juventude</div>
+        <div class="kpi-value" style="color:#9a5d00">${nJovens.toLocaleString('pt-BR')}</div>
+        <div class="kpi-sub">${pct(pJov)} · 15–29 anos</div>
+      </div>
+      <div class="kpi-card" style="border-left:3px solid #7b3fa0">
+        <div class="kpi-label" style="color:#7b3fa0">🌍 Quilombolas</div>
+        <div class="kpi-value" style="color:#7b3fa0">${nQuilombolas.toLocaleString('pt-BR')}</div>
+        <div class="kpi-sub">${pct(pQui)} do total</div>
+      </div>
+    </div>
+
+    <!-- Recortes visuais -->
+    <div class="card">
+      <div class="card-title">Recortes de equidade</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;padding:8px 0">
+        ${[
+          {label:'👩 Mulheres', n:nMulheres, p:pMul, cor:'#e0417a'},
+          {label:'🌱 Juventude (15–29)', n:nJovens, p:pJov, cor:'#d49000'},
+          {label:'🌍 Quilombolas', n:nQuilombolas, p:pQui, cor:'#7b3fa0'}
+        ].map(x => `
+          <div style="text-align:center">
+            <div style="font-size:36px;font-weight:700;color:${x.cor};line-height:1">${pct(x.p,0)}</div>
+            <div style="font-size:12px;font-weight:600;color:${x.cor};margin:4px 0 2px">${x.n.toLocaleString('pt-BR')} pessoas</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${x.label}</div>
+            <div class="prog-wrap" style="height:7px;border-radius:4px">
+              <div class="prog-fill" style="width:${(x.p*100).toFixed(0)}%;background:${x.cor};border-radius:4px"></div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Distribuições -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      ${munSection}${ativSection}${semColuna}
     </div>
   </div>`;
 }
 
-// ── ORÇAMENTO ÓRGÃO ──
+// ── ORÇAMENTO ÓRGÃO — BI consolidado ──
 function renderOrcamento(rows) {
   if (!rows || rows.length < 4) {
     document.getElementById('orcamento-content').outerHTML =
       '<div id="orcamento-content" class="state-box error">Dados de Orçamento Órgão não disponíveis.<br><small>Verifique o botão 🔍 para ver as chaves da API.</small></div>';
     return;
   }
-  const secretarias = ['SEPLAN','INTERPI','SAF','SEMARH'];
-  const cores = {'SEPLAN':'#1352a2','INTERPI':'#0e7c4a','SAF':'#d49000','SEMARH':'#7b3fa0'};
-  const data = rows.slice(2).filter(r => r[0] && String(r[0]).trim());
-  let totalUS = 0;
-  data.filter(r => String(r[0]).match(/^Componente \d/i)).forEach(r => {
-    totalUS += parseFloat(String(r[1]||'').replace(/[^\d.]/g,'')) || 0;
+
+  const data      = rows.slice(2).filter(r => r[0] && String(r[0]).trim());
+  const compRows  = data.filter(r => String(r[0]).match(/^Componente \d/i));
+
+  const orgs = [
+    {nome:'SEPLAN',  cor:'#1352a2', ci:{disp:2, comp:3, exec:4}},
+    {nome:'INTERPI', cor:'#0e7c4a', ci:{disp:6, comp:7, exec:8}},
+    {nome:'SAF',     cor:'#d49000', ci:{disp:10,comp:11,exec:12}},
+    {nome:'SEMARH',  cor:'#7b3fa0', ci:{disp:14,comp:15,exec:16}},
+  ];
+
+  const parseV = v => parseFloat(String(v||'').replace(/[^\d.]/g,'')) || 0;
+  const fmtMi  = v => v >= 1000000
+    ? 'US$ ' + (v/1000000).toFixed(2).replace('.',',') + ' mi'
+    : v > 0 ? 'US$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:0}) : 'US$ 0';
+
+  let totalGeral = {disp:0, comp:0, exec:0};
+
+  const orgTotais = orgs.map(o => {
+    let disp=0, comp=0, exec=0;
+    compRows.forEach(r => {
+      disp += parseV(r[o.ci.disp]);
+      comp += parseV(r[o.ci.comp]);
+      exec += parseV(r[o.ci.exec]);
+    });
+    totalGeral.disp += disp;
+    totalGeral.comp += comp;
+    totalGeral.exec += exec;
+    return {...o, disp, comp, exec};
   });
-  const thSecr = secretarias.map(s =>
-    `<th colspan="4" style="text-align:center;background:${cores[s]}20;color:${cores[s]}">${s}</th>`
-  ).join('');
-  const thSub = secretarias.map(() =>
-    `<th class="num">Disp.</th><th class="num">Comp.</th><th class="num">Exec.</th><th class="num">Saldo</th>`
-  ).join('');
-  const tRows = data.map(r => {
-    const isComp = String(r[0]).match(/^Componente \d/i);
-    const isSub  = String(r[0]).match(/^\d+\.\d+/);
-    const bg = isComp ? 'background:#1352a215;font-weight:700' : isSub ? 'background:#f5f7fb;font-weight:600' : '';
-    const indent = (!isComp && !isSub) ? 'padding-left:20px' : '';
-    const fmtUS = v => {
-      const n = parseFloat(String(v||'').replace(/[^\d.]/g,'')) || 0;
-      return n > 0 ? 'US$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:0}) : 'US$0';
-    };
-    const cols = [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17].map(i =>
-      `<td class="num" style="font-size:11px">${fmtUS(r[i])}</td>`
-    ).join('');
-    return `<tr style="${bg}">
-      <td style="${indent};font-size:12px;max-width:280px">${r[0]}</td>
-      <td class="num" style="font-weight:600;font-size:12px">${fmtUS(r[1])}</td>
-      ${cols}
-    </tr>`;
+
+  const orgCards = orgTotais.map(o => {
+    const pComp = o.disp > 0 ? o.comp/o.disp : 0;
+    const pExec = o.disp > 0 ? o.exec/o.disp : 0;
+    return `
+    <div class="card" style="border-top:3px solid ${o.cor}">
+      <div style="font-size:15px;font-weight:700;color:${o.cor};margin-bottom:16px">${o.nome}</div>
+
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px">
+          <span>Disponível</span>
+          <span style="font-weight:700;color:var(--text)">${fmtMi(o.disp)}</span>
+        </div>
+        <div class="prog-wrap" style="height:7px">
+          <div class="prog-fill" style="width:100%;background:#dde3ef"></div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px">
+          <span>Comprometido</span>
+          <span><strong style="color:var(--text)">${fmtMi(o.comp)}</strong> <span style="color:${o.cor};font-weight:700">${pct(pComp)}</span></span>
+        </div>
+        <div class="prog-wrap" style="height:7px">
+          <div class="prog-fill" style="width:${Math.min(pComp*100,100).toFixed(0)}%;background:${o.cor}88"></div>
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px">
+          <span>Executado</span>
+          <span><strong style="color:var(--text)">${fmtMi(o.exec)}</strong> <span style="color:${o.cor};font-weight:700">${pct(pExec)}</span></span>
+        </div>
+        <div class="prog-wrap" style="height:7px">
+          <div class="prog-fill" style="width:${Math.min(pExec*100,100).toFixed(0)}%;background:${o.cor}"></div>
+        </div>
+      </div>
+    </div>`;
   }).join('');
+
+  const pCompG = totalGeral.disp > 0 ? totalGeral.comp/totalGeral.disp : 0;
+  const pExecG = totalGeral.disp > 0 ? totalGeral.exec/totalGeral.disp : 0;
 
   document.getElementById('orcamento-content').outerHTML = `
   <div id="orcamento-content">
+
+    <!-- KPIs consolidados -->
     <div class="kpi-grid">
       <div class="kpi-card kpi-blue">
-        <div class="kpi-label">Valor total do projeto</div>
-        <div class="kpi-value" style="font-size:17px">US$ ${totalUS.toLocaleString('pt-BR',{minimumFractionDigits:0})}</div>
+        <div class="kpi-label">Total disponível</div>
+        <div class="kpi-value" style="font-size:17px">${fmtMi(totalGeral.disp)}</div>
+        <div class="kpi-sub">Todas as secretarias</div>
       </div>
-      ${secretarias.map(s => `
-        <div class="kpi-card">
-          <div class="kpi-label" style="color:${cores[s]}">${s}</div>
-          <div class="kpi-value" style="font-size:13px;color:${cores[s]}">Disp / Comp / Exec</div>
-        </div>`).join('')}
+      <div class="kpi-card">
+        <div class="kpi-label">Comprometido</div>
+        <div class="kpi-value" style="font-size:17px">${fmtMi(totalGeral.comp)}</div>
+        <div class="kpi-sub">${pct(pCompG)} do disponível</div>
+      </div>
+      <div class="kpi-card kpi-green">
+        <div class="kpi-label">Executado</div>
+        <div class="kpi-value" style="font-size:17px">${fmtMi(totalGeral.exec)}</div>
+        <div class="kpi-sub">${pct(pExecG)} do disponível</div>
+      </div>
     </div>
-    <div class="card">
-      <div class="card-title">Planejado total do PSI — por componente e secretaria (US$)</div>
-      <div style="overflow-x:auto">
-        <table class="tbl">
-          <thead>
-            <tr>
-              <th rowspan="2" style="min-width:200px">Componente / Subcomponente</th>
-              <th rowspan="2" class="num">Valor Total US$</th>
-              ${thSecr}
-            </tr>
-            <tr>${thSub}</tr>
-          </thead>
-          <tbody>${tRows}</tbody>
-        </table>
-      </div>
+
+    <!-- Cards por órgão — 2 × 2 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      ${orgCards}
     </div>
   </div>`;
 }
