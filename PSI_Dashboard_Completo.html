@@ -1414,107 +1414,186 @@ function renderOrcamento(rows) {
   });
 }
 
-// ── ENTREGA DE CISTERNAS ──
-let chartCisternas = null;
+// ── ENTREGA DE CISTERNAS — BI completo ──
+// Bloco 1: Entregas (quantidade por empresa/mês + Total geral na última coluna)
+// Bloco 2: Pagamentos (R$ por empresa/mês)
+let chartCistE = null;
+
 function renderCisternas(rows) {
   if (!rows || rows.length < 3) {
     document.getElementById('cisternas-content').outerHTML =
       '<div id="cisternas-content" class="state-box error">Dados de Entrega de Cisternas não disponíveis.<br><small>Verifique o botão 🔍 para ver as chaves da API.</small></div>';
     return;
   }
-  const cabLinha = rows[1] || [];
-  const meses = cabLinha.slice(2).filter(c => c && String(c).trim());
-  const cores = ['#1352a2','#0e7c4a','#d49000'];
-  const blocoEntregas = rows.slice(2, rows.length);
-  const blocoEntregasFiltrado = blocoEntregas.filter(r => r[0] && String(r[0]).trim() && !String(r[0]).includes('Total') && !String(r[0]).includes('PAGAMENTO'));
-  const thMeses = meses.map(m => `<th class="num" style="white-space:nowrap;font-size:10px">${m}</th>`).join('');
-  const totaisMes = meses.map((_, mi) => {
-    let soma = 0;
-    blocoEntregasFiltrado.forEach(r => { soma += parseInt(String(r[mi+2]||'0').replace(/\D/g,'')) || 0; });
-    return soma;
+
+  const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  const findRow = (kw, from=0) => rows.findIndex((r,i) => i>=from && r.some(c => norm(c).includes(kw)));
+
+  const parseN = v => { const n = parseInt(String(v||'').replace(/\D/g,'')); return isNaN(n) ? 0 : n; };
+  const parseR = v => {
+    const s = String(v||'').replace(/R\$\s*/i,'').replace(/\s/g,'').replace(/\./g,'').replace(',','.');
+    const n = parseFloat(s);
+    return isNaN(n) ? 0 : n;
+  };
+
+  // ── Bloco Entregas ──
+  const iEHdr = findRow('empresa contratada');
+  const eHdr  = rows[iEHdr] || [];
+
+  // Detecta colunas de meses (formato "Mês/AA")
+  const mesesCols = eHdr
+    .map((c, i) => ({nome: String(c||'').trim(), idx: i}))
+    .filter(({nome}) => /\w+\/\d{2}/.test(nome));
+
+  const iTotalCol = eHdr.findIndex(c => /total/i.test(String(c||'')));
+
+  const iEStart    = iEHdr >= 0 ? iEHdr + 1 : 3;
+  const iETotalRow = findRow('total geral', iEStart);
+
+  const eEmpresaRows = rows
+    .slice(iEStart, iETotalRow >= 0 ? iETotalRow : iEStart + 6)
+    .filter(r => r[0] && String(r[0]).trim() && !norm(r[0]).includes('total'));
+
+  const empresasE = eEmpresaRows.map(r => ({
+    nome:  String(r[0]).trim(),
+    data:  String(r[1]||'').trim(),
+    meses: mesesCols.map(({idx}) => parseN(r[idx])),
+    total: iTotalCol >= 0 ? parseN(r[iTotalCol])
+                          : mesesCols.reduce((s,{idx}) => s + parseN(r[idx]), 0)
+  }));
+
+  // ── Bloco Pagamentos ──
+  const iPagTitle = findRow('pagamento', iETotalRow >= 0 ? iETotalRow : 0);
+  const iPagStart = iPagTitle >= 0 ? iPagTitle + 1 : -1;
+  const iPagTotRow = iPagStart >= 0 ? findRow('total', iPagStart) : -1;
+
+  const pEmpresaRows = iPagStart >= 0
+    ? rows.slice(iPagStart, iPagTotRow >= 0 ? iPagTotRow : iPagStart + 6)
+        .filter(r => r[0] && String(r[0]).trim()
+                  && !norm(r[0]).includes('total')
+                  && !norm(r[0]).includes('pagamento'))
+    : [];
+
+  const empresasP = pEmpresaRows.map(r => {
+    // Tenta os mesmos índices de colunas dos meses; fallback: offset -1 se sem col de data
+    const meses = mesesCols.map(({idx}) => {
+      const v = parseR(r[idx]);
+      return v > 0 ? v : parseR(r[idx - 1]);
+    });
+    return { nome: String(r[0]).trim(), meses, total: meses.reduce((s,v)=>s+v,0) };
   });
-  const totalGeral = totaisMes.reduce((a,b) => a+b, 0);
-  const tRowsEmp = blocoEntregasFiltrado.map((r, ei) => {
-    const cor = cores[ei % cores.length];
-    const nome = String(r[0]||'').trim();
-    const data = String(r[1]||'').trim();
-    const vals = meses.map((_,mi) => {
-      const v = parseInt(String(r[mi+2]||'0').replace(/\D/g,'')) || 0;
-      return `<td class="num" style="font-size:11px">${v > 0 ? `<strong style="color:${cor}">${v}</strong>` : '<span style="color:#ccc">0</span>'}</td>`;
-    }).join('');
-    const totalEmp = meses.reduce((s,_,mi) => s + (parseInt(String(r[mi+2]||'0').replace(/\D/g,'')) || 0), 0);
+
+  // ── Totais ──
+  const totalGeralE = empresasE.reduce((s,e) => s + e.total, 0);
+  const totalGeralP = empresasP.reduce((s,e) => s + e.total, 0);
+  const mensalE = mesesCols.map((_,mi) => empresasE.reduce((s,e) => s+(e.meses[mi]||0), 0));
+  const mensalP = mesesCols.map((_,mi) => empresasP.reduce((s,e) => s+(e.meses[mi]||0), 0));
+  const mesesNomes = mesesCols.map(({nome}) => nome);
+
+  const cores = ['#1352a2','#0e7c4a','#d49000'];
+
+  // KPI cards por empresa
+  const empKPIs = empresasE.map((e,i) => `
+    <div class="kpi-card" style="border-left:3px solid ${cores[i%cores.length]}">
+      <div class="kpi-label" style="color:${cores[i%cores.length]}">${e.nome}</div>
+      <div class="kpi-value" style="color:${cores[i%cores.length]}">${e.total.toLocaleString('pt-BR')}</div>
+      <div class="kpi-sub">cisternas · contrato ${e.data}</div>
+    </div>`).join('');
+
+  // Tabela de pagamentos (mostra todos os meses, mesmo zerados)
+  const pagTbRows = empresasP.map((e,i) => {
+    const mCols = e.meses.map(v =>
+      `<td class="num" style="font-size:10px">${v > 0 ? brl(v) : '<span style="color:#ccc">R$0</span>'}</td>`
+    ).join('');
     return `<tr>
-      <td style="font-weight:600;color:${cor}">${nome}</td>
-      <td style="font-size:11px;color:var(--muted)">${data}</td>
-      ${vals}
-      <td class="num" style="font-weight:700">${totalEmp}</td>
+      <td style="font-weight:600;color:${cores[i%cores.length]};font-size:11px;white-space:nowrap">${e.nome}</td>
+      ${mCols}
+      <td class="num" style="font-weight:700">${e.total > 0 ? brl(e.total) : 'R$ 0,00'}</td>
     </tr>`;
   }).join('');
-  const thTotais = totaisMes.map(t =>
-    `<td class="num" style="font-weight:700;background:#f2f5fb">${t > 0 ? t : '<span style="color:#ccc">0</span>'}</td>`
+
+  const pagTotalCols = mensalP.map(v =>
+    `<td class="num" style="font-weight:700;font-size:10px;background:#f2f5fb">${v > 0 ? brl(v) : '<span style="color:#ccc">R$0</span>'}</td>`
   ).join('');
-  const mesesComDados = meses.filter((_,i) => totaisMes[i] > 0);
-  const totaisComDados = totaisMes.filter(t => t > 0);
 
   document.getElementById('cisternas-content').outerHTML = `
   <div id="cisternas-content">
+
+    <!-- KPIs -->
     <div class="kpi-grid">
       <div class="kpi-card kpi-blue">
         <div class="kpi-label">Total cisternas entregues</div>
-        <div class="kpi-value">${totalGeral.toLocaleString('pt-BR')}</div>
-        <div class="kpi-sub">Acumulado</div>
+        <div class="kpi-value">${totalGeralE.toLocaleString('pt-BR')}</div>
+        <div class="kpi-sub">Todas as empresas</div>
       </div>
-      ${blocoEntregasFiltrado.map((r,ei) => {
-        const tot = meses.reduce((s,_,mi) => s + (parseInt(String(r[mi+2]||'0').replace(/\D/g,'')) || 0), 0);
-        return `<div class="kpi-card">
-          <div class="kpi-label" style="color:${cores[ei%cores.length]}">${String(r[0]||'').trim()}</div>
-          <div class="kpi-value" style="color:${cores[ei%cores.length]}">${tot.toLocaleString('pt-BR')}</div>
-          <div class="kpi-sub">unidades</div>
-        </div>`;
-      }).join('')}
+      ${empKPIs}
+      <div class="kpi-card">
+        <div class="kpi-label">Total pago</div>
+        <div class="kpi-value" style="font-size:15px">${totalGeralP > 0 ? brl(totalGeralP) : 'R$ 0,00'}</div>
+        <div class="kpi-sub">Pagamentos acumulados</div>
+      </div>
     </div>
+
+    <!-- Gráfico de entregas por empresa por mês -->
     <div class="card">
-      <div class="card-title">Entregas mensais — por empresa (unidades)</div>
+      <div class="card-title">Entregas mensais por empresa (unidades)</div>
+      <div class="chart-wrap" style="height:270px">
+        <canvas id="chart-cist-e"></canvas>
+      </div>
+    </div>
+
+    <!-- Tabela de pagamentos -->
+    <div class="card">
+      <div class="card-title">Pagamentos mensais por empresa (R$)</div>
       <div style="overflow-x:auto">
         <table class="tbl">
-          <thead><tr>
-            <th>Empresa</th><th>Contrato</th>
-            ${thMeses}
-            <th class="num">Total</th>
-          </tr></thead>
+          <thead>
+            <tr>
+              <th style="white-space:nowrap">Empresa</th>
+              ${mesesNomes.map(m=>`<th class="num" style="font-size:9px;white-space:nowrap">${m}</th>`).join('')}
+              <th class="num">Total</th>
+            </tr>
+          </thead>
           <tbody>
-            ${tRowsEmp}
-            <tr style="background:#f2f5fb;font-weight:700">
-              <td colspan="2">Total geral</td>
-              ${thTotais}
-              <td class="num">${totalGeral}</td>
+            ${pagTbRows || '<tr><td colspan="99" style="color:var(--muted);text-align:center">Aguardando dados de pagamento.</td></tr>'}
+            <tr>
+              <td style="font-weight:700;background:#f2f5fb">Total geral</td>
+              ${pagTotalCols}
+              <td class="num" style="font-weight:700;background:#f2f5fb">${totalGeralP > 0 ? brl(totalGeralP) : 'R$ 0,00'}</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
-    ${mesesComDados.length > 0 ? `
-    <div class="card">
-      <div class="card-title">Evolução mensal de entregas — total (unidades)</div>
-      <div class="chart-wrap" style="height:220px"><canvas id="chart-cisternas"></canvas></div>
-    </div>` : ''}
+
   </div>`;
 
-  if (chartCisternas) { chartCisternas.destroy(); chartCisternas = null; }
-  if (mesesComDados.length > 0) {
-    chartCisternas = new Chart(document.getElementById('chart-cisternas'), {
-      type: 'bar',
-      data: { labels: mesesComDados, datasets: [{ data: totaisComDados, backgroundColor:'#1352a2', borderRadius:5, borderSkipped:false }] },
-      options: {
-        responsive:true, maintainAspectRatio:false,
-        plugins:{legend:{display:false}},
-        scales:{
-          x:{grid:{display:false},ticks:{color:'#6b7585',font:{size:10}}},
-          y:{grid:{color:'#eaedf2'},ticks:{color:'#6b7585',font:{size:10}},beginAtZero:true}
-        }
+  // Gráfico de barras agrupadas por empresa
+  if (chartCistE) { chartCistE.destroy(); chartCistE = null; }
+  chartCistE = new Chart(document.getElementById('chart-cist-e'), {
+    type: 'bar',
+    data: {
+      labels: mesesNomes,
+      datasets: empresasE.map((e,i) => ({
+        label: e.nome,
+        data:  e.meses,
+        backgroundColor: cores[i % cores.length],
+        borderRadius: 3,
+        borderSkipped: false
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position:'bottom', labels:{font:{size:11}, padding:12} },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} cisternas` } }
+      },
+      scales: {
+        x: { grid:{display:false}, ticks:{color:'#6b7585', font:{size:9}, maxRotation:45} },
+        y: { beginAtZero:true, grid:{color:'#eaedf2'}, ticks:{color:'#6b7585', font:{size:10}, stepSize:5} }
       }
-    });
-  }
+    }
+  });
 }
 
 /* ══════════════════════════════════════════════════
@@ -1593,3 +1672,4 @@ carregarTudo();
 </script>
 </body>
 </html>
+
