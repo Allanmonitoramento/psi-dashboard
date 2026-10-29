@@ -1493,22 +1493,32 @@ function renderCisternas(rows) {
 
   // ── Bloco Pagamentos ──
   const iPagTitle = findRow('pagamento', iETotalRow >= 0 ? iETotalRow : 0);
-  const iPagStart = iPagTitle >= 0 ? iPagTitle + 1 : -1;
+
+  // Localiza o cabeçalho próprio da tabela de pagamentos (linha com "empresa" após o título)
+  const iPagHdr = iPagTitle >= 0 ? findRow('empresa', iPagTitle + 1) : -1;
+
+  // Detecta colunas de meses do cabeçalho de PAGAMENTOS (independente do bloco de entregas)
+  const pHdr = iPagHdr >= 0 ? (rows[iPagHdr] || []) : [];
+  const mesesColsP = pHdr.length > 0
+    ? pHdr.map((c, i) => ({nome: String(c||'').trim(), idx: i}))
+          .filter(({nome}) => /\w+\/\d{2}/.test(nome))
+    : mesesCols; // fallback: usa os mesmos índices do bloco de entregas
+
+  // Início dos dados: após o cabeçalho de pagamentos (ou título se não houver cabeçalho)
+  const iPagStart = iPagHdr >= 0 ? iPagHdr + 1 : (iPagTitle >= 0 ? iPagTitle + 1 : -1);
   const iPagTotRow = iPagStart >= 0 ? findRow('total', iPagStart) : -1;
 
   const pEmpresaRows = iPagStart >= 0
-    ? rows.slice(iPagStart, iPagTotRow >= 0 ? iPagTotRow : iPagStart + 6)
+    ? rows.slice(iPagStart, iPagTotRow >= 0 ? iPagTotRow : rows.length)
         .filter(r => r[0] && String(r[0]).trim()
                   && !norm(r[0]).includes('total')
-                  && !norm(r[0]).includes('pagamento'))
+                  && !norm(r[0]).includes('pagamento')
+                  && !norm(r[0]).includes('empresa'))
     : [];
 
   const empresasP = pEmpresaRows.map(r => {
-    // Tenta os mesmos índices de colunas dos meses; fallback: offset -1 se sem col de data
-    const meses = mesesCols.map(({idx}) => {
-      const v = parseR(r[idx]);
-      return v > 0 ? v : parseR(r[idx - 1]);
-    });
+    // Usa os índices do cabeçalho próprio de pagamentos
+    const meses = mesesColsP.map(({idx}) => parseR(r[idx]));
     return { nome: String(r[0]).trim(), meses, total: meses.reduce((s,v)=>s+v,0) };
   });
 
@@ -1516,8 +1526,9 @@ function renderCisternas(rows) {
   const totalGeralE = empresasE.reduce((s,e) => s + e.total, 0);
   const totalGeralP = empresasP.reduce((s,e) => s + e.total, 0);
   const mensalE = mesesCols.map((_,mi) => empresasE.reduce((s,e) => s+(e.meses[mi]||0), 0));
-  const mensalP = mesesCols.map((_,mi) => empresasP.reduce((s,e) => s+(e.meses[mi]||0), 0));
+  const mensalP = mesesColsP.map((_,mi) => empresasP.reduce((s,e) => s+(e.meses[mi]||0), 0));
   const mesesNomes = mesesCols.map(({nome}) => nome);
+  const mesesNomesP = mesesColsP.map(({nome}) => nome);
 
   const cores = ['#1352a2','#0e7c4a','#d49000'];
 
@@ -1579,7 +1590,7 @@ function renderCisternas(rows) {
           <thead>
             <tr>
               <th style="white-space:nowrap">Empresa</th>
-              ${mesesNomes.map(m=>`<th class="num" style="font-size:9px;white-space:nowrap">${m}</th>`).join('')}
+              ${mesesNomesP.map(m=>`<th class="num" style="font-size:9px;white-space:nowrap">${m}</th>`).join('')}
               <th class="num">Total</th>
             </tr>
           </thead>
