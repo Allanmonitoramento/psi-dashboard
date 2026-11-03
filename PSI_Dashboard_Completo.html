@@ -430,7 +430,7 @@ body {
 ══════════════════════════════════════════════════ */
 const API_PSI = 'https://script.google.com/macros/s/AKfycbwQVt5-wVNycKRtvvSZsFzLzkCujGDM6iOxpWWEEsEVEjSX0bS07bHMKIu8_6o1CxRLCg/exec';
 
-let ACORDOS_DATA = [];
+// ACORDOS_DATA removido — usar ACORDOS_FONTES[fonte] ou dadosAcordosAtivos()
 let _debugVisible = false;
 let _apiKeys = [];
 
@@ -682,29 +682,72 @@ function renderFin() {
   });
 }
 
-// ── ACORDOS (via API — aba: ACORDO GERAL- 2026) ──
+// ── ACORDOS (via API — múltiplas abas) ──
 let filtroAtivo = 'Todos';
+let fonteAtiva  = 'geral'; // 'geral' | 'missao25' | 'missao26' | 'revisao'
 
-function parseAcordosRows(rows) {
-  if (!rows || rows.length < 3) return [];
-  return rows.slice(2).filter(r => r[0] && String(r[0]).trim() && String(r[1]).trim()).map(r => ({
-    nivel:     String(r[0]||'').trim(),
-    atividade: String(r[1]||'').trim(),
-    resp:      String(r[2]||'').trim(),
-    prazo:     String(r[3]||'').trim(),
-    status:    String(r[4]||'').trim(),
-    evidencia: String(r[5]||'').trim()
-  }));
+// Armazena dados de cada fonte
+const ACORDOS_FONTES = { geral: [], missao25: [], missao26: [], revisao: [] };
+
+function parseAcordosRows(rows, offset) {
+  // offset: linha onde começam os dados (0-indexed); padrão = 2 (pula 2 linhas de cabeçalho)
+  const start = offset !== undefined ? offset : 2;
+  if (!rows || rows.length <= start) return [];
+  return rows.slice(start)
+    .filter(r => r[0] && String(r[0]).trim() && String(r[1]).trim())
+    .map(r => ({
+      nivel:     String(r[0]||'').trim(),
+      atividade: String(r[1]||'').trim(),
+      resp:      String(r[2]||'').trim(),
+      prazo:     String(r[3]||'').trim(),
+      status:    String(r[4]||'').trim(),
+      evidencia: String(r[5]||'').trim()
+    }));
 }
 
-function renderAcordos(filtro) {
+// Detecta automaticamente o offset correto (procura linha cujo r[1] parece atividade/texto)
+function parseAcordosAuto(rows) {
+  if (!rows || rows.length < 2) return [];
+  // Tenta offset 1 e 2; usa o que produzir mais registros válidos
+  const t1 = parseAcordosRows(rows, 1);
+  const t2 = parseAcordosRows(rows, 2);
+  return t1.length >= t2.length ? t1 : t2;
+}
+
+function dadosAcordosAtivos() {
+  return ACORDOS_FONTES[fonteAtiva] || [];
+}
+
+const FONTES_CONFIG = {
+  geral:    { label: 'Acordo Geral 2026',          niveis: ['Todos','Reunião controle','Matriz de riscos','Carteira FIDA','RR5'] },
+  missao25: { label: 'Acordos Missão 2025',         niveis: ['Todos'] },
+  missao26: { label: 'Acordos Missão 2026',         niveis: ['Todos'] },
+  revisao:  { label: 'Revisão de Carteira BID',     niveis: ['Todos'] }
+};
+
+function renderAcordos(filtro, fonte) {
+  if (fonte !== undefined) fonteAtiva = fonte;
   filtroAtivo = filtro || 'Todos';
+
+  const ACORDOS_DATA = dadosAcordosAtivos();
+  const cfg = FONTES_CONFIG[fonteAtiva];
+
+  // Detecta niveis reais presentes nos dados (além dos padrão)
+  const niveisPresentes = [...new Set(ACORDOS_DATA.map(a => a.nivel).filter(Boolean))];
+  const niveisBase = cfg.niveis.includes('Todos') ? ['Todos', ...niveisPresentes.filter(n => !cfg.niveis.includes(n))] : cfg.niveis;
+  const niveis = [...new Set([...cfg.niveis, ...niveisPresentes])];
+
   if (ACORDOS_DATA.length === 0) {
+    // Verifica se alguma outra fonte tem dados
+    const temDados = Object.values(ACORDOS_FONTES).some(v => v.length > 0);
+    const msg = temDados
+      ? `Dados de "<strong>${cfg.label}</strong>" não disponíveis na API.<br><small>Verifique se a aba está sendo exportada pelo Apps Script.</small>`
+      : '⏳ Carregando acordos da API...';
     document.getElementById('acordos-content').outerHTML =
-      '<div id="acordos-content" class="state-box">⏳ Carregando acordos da API...</div>';
+      `<div id="acordos-content" class="state-box">${msg}</div>`;
     return;
   }
-  const niveis = ['Todos','Reunião controle','Matriz de riscos','Carteira FIDA','RR5'];
+
   const stats = {total:0,concluido:0,andamento:0,atraso:0,naoIniciado:0};
   ACORDOS_DATA.forEach(a => {
     stats.total++;
@@ -735,8 +778,22 @@ function renderAcordos(filtro) {
     `<button class="filter-btn ${filtroAtivo===n?'active':''}" onclick="renderAcordos('${n}')">${n}</button>`
   ).join('');
 
+  // Abas de fonte
+  const fonteBtns = Object.entries(FONTES_CONFIG).map(([k, v]) => {
+    const cnt = ACORDOS_FONTES[k].length;
+    const disabled = cnt === 0 ? 'style="opacity:.4;cursor:default"' : '';
+    const active = k === fonteAtiva ? 'active' : '';
+    return `<button class="filter-btn ${active}" onclick="renderAcordos('Todos','${k}')" ${disabled}>${v.label}${cnt > 0 ? ` <span style="font-size:9px;opacity:.7">(${cnt})</span>` : ' ⚠️'}</button>`;
+  }).join('');
+
   document.getElementById('acordos-content').outerHTML = `
   <div id="acordos-content">
+    <!-- Seletor de fonte/aba -->
+    <div class="card" style="padding:10px 16px;margin-bottom:8px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Selecionar aba</div>
+      <div class="acord-filters">${fonteBtns}</div>
+    </div>
+
     <div class="kpi-grid">
       <div class="kpi-card"><div class="kpi-label">Total de acordos</div><div class="kpi-value">${stats.total}</div></div>
       <div class="kpi-card kpi-green"><div class="kpi-label">Concluídos</div><div class="kpi-value">${stats.concluido}</div><div class="kpi-sub">${pct(stats.concluido/stats.total)}</div></div>
@@ -745,7 +802,7 @@ function renderAcordos(filtro) {
       <div class="kpi-card"><div class="kpi-label">Não iniciados</div><div class="kpi-value">${stats.naoIniciado}</div><div class="kpi-sub">${pct(stats.naoIniciado/stats.total)}</div></div>
     </div>
     <div class="card acord-table">
-      <div class="card-title">Acordos Geral 2026 — ${filtroAtivo} (${dados.length} registros)</div>
+      <div class="card-title">${cfg.label} — ${filtroAtivo} (${dados.length} registros)</div>
       <div class="acord-filters">${filterBtns}</div>
       <div style="overflow-x:auto">
         <table class="tbl">
@@ -764,8 +821,10 @@ function renderAcordos(filtro) {
 // ── VISÃO GERAL ──
 function renderVisaoGeral(dados) {
   const esp = percEsperado();
-  const acStats = {total:ACORDOS_DATA.length, conc:0, and:0, atr:0, ni:0};
-  ACORDOS_DATA.forEach(a => {
+  // Soma todas as fontes de acordos para a visão geral
+  const todosAcordos = Object.values(ACORDOS_FONTES).flat();
+  const acStats = {total:todosAcordos.length, conc:0, and:0, atr:0, ni:0};
+  todosAcordos.forEach(a => {
     if(a.status==='Concluído') acStats.conc++;
     else if(a.status==='Em andamento') acStats.and++;
     else if(a.status==='Em atraso') acStats.atr++;
@@ -1675,15 +1734,35 @@ async function carregarTudo() {
       findKey(dados, 'Perfil PAP', 'PERFIL PAP', 'perfil_pap', 'PERFIL_PAP')
     );
 
-    // Acordos: aba "ACORDO GERAL- 2026" (nome exato da planilha)
-    const rawAcordos = findKey(dados,
-      'ACORDO GERAL- 2026',
-      'ACORDO GERAL-2026',
-      'ACORDO GERAL 2026',
-      'ACORDO_GERAL_2026',
-      'ACORDO_GERAL-2026'
+    // Acordos — carrega todas as abas disponíveis
+    const rawGeral = findKey(dados,
+      'ACORDO GERAL- 2026', 'ACORDO GERAL-2026', 'ACORDO GERAL 2026',
+      'ACORDO_GERAL_2026', 'ACORDO_GERAL-2026'
     );
-    ACORDOS_DATA = rawAcordos ? parseAcordosRows(rawAcordos) : [];
+    const rawMissao25 = findKey(dados,
+      'ACORDOS MISSÃO 2025', 'ACORDOS MISSAO 2025', 'ACORDOS_MISSÃO_2025',
+      'ACORDOS_MISSAO_2025', 'ACORDOS MISSAO 2025'
+    );
+    const rawMissao26 = findKey(dados,
+      'ACORDOS MISSÃO 2026', 'ACORDOS MISSAO 2026', 'ACORDOS_MISSÃO_2026',
+      'ACORDOS_MISSAO_2026', 'ACORDOS MISSAO 2026'
+    );
+    const rawRevisao = findKey(dados,
+      'ACORDOS REVISÃO DE CARTEIRA BID', 'ACORDOS REVISAO DE CARTEIRA BID',
+      'ACORDOS_REVISAO_DE_CARTEIRA_BID', 'ACORDOS REVISÃO CARTEIRA BID',
+      'ACORDOS REVISAO CARTEIRA BID'
+    );
+
+    ACORDOS_FONTES.geral    = rawGeral    ? parseAcordosAuto(rawGeral)    : [];
+    ACORDOS_FONTES.missao25 = rawMissao25 ? parseAcordosAuto(rawMissao25) : [];
+    ACORDOS_FONTES.missao26 = rawMissao26 ? parseAcordosAuto(rawMissao26) : [];
+    ACORDOS_FONTES.revisao  = rawRevisao  ? parseAcordosAuto(rawRevisao)  : [];
+
+    // Ativa a primeira fonte que tenha dados
+    if (ACORDOS_FONTES.geral.length > 0) fonteAtiva = 'geral';
+    else if (ACORDOS_FONTES.missao26.length > 0) fonteAtiva = 'missao26';
+    else if (ACORDOS_FONTES.missao25.length > 0) fonteAtiva = 'missao25';
+
     renderAcordos(filtroAtivo);
 
     renderVisaoGeral(dados);
@@ -1712,3 +1791,4 @@ carregarTudo();
 </script>
 </body>
 </html>
+
