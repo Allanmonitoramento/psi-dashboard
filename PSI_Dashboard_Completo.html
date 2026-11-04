@@ -689,11 +689,11 @@ let fonteAtiva  = 'geral'; // 'geral' | 'missao25' | 'missao26' | 'revisao'
 // Armazena dados de cada fonte
 const ACORDOS_FONTES = { geral: [], missao25: [], missao26: [], revisao: [] };
 
-function parseAcordosRows(rows, offset) {
-  // offset: linha onde começam os dados (0-indexed); padrão = 2 (pula 2 linhas de cabeçalho)
-  const start = offset !== undefined ? offset : 2;
-  if (!rows || rows.length <= start) return [];
-  return rows.slice(start)
+// Parser para aba ACORDO GERAL
+// Colunas: Nível | Atividade | Responsável | Prazo | Status | Evidências
+function parseAcordosGeral(rows) {
+  if (!rows || rows.length < 3) return [];
+  return rows.slice(2)
     .filter(r => r[0] && String(r[0]).trim() && String(r[1]).trim())
     .map(r => ({
       nivel:     String(r[0]||'').trim(),
@@ -705,13 +705,43 @@ function parseAcordosRows(rows, offset) {
     }));
 }
 
-// Detecta automaticamente o offset correto (procura linha cujo r[1] parece atividade/texto)
-function parseAcordosAuto(rows) {
-  if (!rows || rows.length < 2) return [];
-  // Tenta offset 1 e 2; usa o que produzir mais registros válidos
-  const t1 = parseAcordosRows(rows, 1);
-  const t2 = parseAcordosRows(rows, 2);
-  return t1.length >= t2.length ? t1 : t2;
+// Parser para abas de MISSÃO e REVISÃO DE CARTEIRA
+// Linha 0: título ("ATUALIZADO EM ...")
+// Linha 1: cabeçalho (Ação | ícone | ÓRGÃO | SETOR | RESP USE | RESP UCP | INÍCIO | PRAZO FINAL | STATUS | OBSERVAÇÃO)
+// Linha 2+: dados
+// Colunas: r[0]=Ação, r[2]=Órgão, r[3]=Setor, r[4]=Resp USE, r[5]=Resp UCP, r[6]=Início, r[7]=Prazo Final, r[8]=Status, r[9]=Observação
+const STATUS_VALIDOS = ['concluído', 'em andamento', 'em atraso', 'não iniciado', 'nao iniciado', 'cancelado', 'concluido'];
+
+function parseAcordosMissao(rows) {
+  if (!rows || rows.length < 3) return [];
+
+  // Detecta a linha de início dos dados (pula título e cabeçalho)
+  // Procura a primeira linha onde r[8] contém um status válido
+  let startRow = 2;
+  for (let i = 1; i < Math.min(rows.length, 5); i++) {
+    const s = String(rows[i][8]||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+    if (STATUS_VALIDOS.some(v => s.includes(v.replace(/[̀-ͯ]/g,'')))) {
+      startRow = i;
+      break;
+    }
+  }
+
+  return rows.slice(startRow)
+    .filter(r => r[0] && String(r[0]).trim().length > 5) // ação deve ter texto real
+    .map(r => {
+      const respUse = String(r[4]||'').trim();
+      const respUcp = String(r[5]||'').trim();
+      const resp = [respUse, respUcp].filter(Boolean).join(' / ') || '—';
+      return {
+        nivel:     String(r[2]||'').trim() || String(r[3]||'').trim() || '—', // ÓRGÃO como nível/filtro
+        atividade: String(r[0]||'').trim(),
+        resp,
+        prazo:     String(r[7]||'').trim(),
+        status:    String(r[8]||'').trim(),
+        evidencia: String(r[9]||'').trim()
+      };
+    })
+    .filter(a => a.atividade.length > 0);
 }
 
 function dadosAcordosAtivos() {
@@ -719,10 +749,10 @@ function dadosAcordosAtivos() {
 }
 
 const FONTES_CONFIG = {
-  geral:    { label: 'Acordo Geral 2026',          niveis: ['Todos','Reunião controle','Matriz de riscos','Carteira FIDA','RR5'] },
-  missao25: { label: 'Acordos Missão 2025',         niveis: ['Todos'] },
-  missao26: { label: 'Acordos Missão 2026',         niveis: ['Todos'] },
-  revisao:  { label: 'Revisão de Carteira BID',     niveis: ['Todos'] }
+  geral:    { label: 'Acordo Geral 2026',       niveis: ['Todos','Reunião controle','Matriz de riscos','Carteira FIDA','RR5'], filtroLabel: 'Nível' },
+  missao25: { label: 'Acordos Missão 2025',     niveis: ['Todos'], filtroLabel: 'Órgão' },
+  missao26: { label: 'Acordos Missão 2026',     niveis: ['Todos'], filtroLabel: 'Órgão' },
+  revisao:  { label: 'Revisão de Carteira BID', niveis: ['Todos'], filtroLabel: 'Órgão' }
 };
 
 function renderAcordos(filtro, fonte) {
@@ -1753,10 +1783,10 @@ async function carregarTudo() {
       'ACORDOS REVISAO CARTEIRA BID'
     );
 
-    ACORDOS_FONTES.geral    = rawGeral    ? parseAcordosAuto(rawGeral)    : [];
-    ACORDOS_FONTES.missao25 = rawMissao25 ? parseAcordosAuto(rawMissao25) : [];
-    ACORDOS_FONTES.missao26 = rawMissao26 ? parseAcordosAuto(rawMissao26) : [];
-    ACORDOS_FONTES.revisao  = rawRevisao  ? parseAcordosAuto(rawRevisao)  : [];
+    ACORDOS_FONTES.geral    = rawGeral    ? parseAcordosGeral(rawGeral)    : [];
+    ACORDOS_FONTES.missao25 = rawMissao25 ? parseAcordosMissao(rawMissao25) : [];
+    ACORDOS_FONTES.missao26 = rawMissao26 ? parseAcordosMissao(rawMissao26) : [];
+    ACORDOS_FONTES.revisao  = rawRevisao  ? parseAcordosMissao(rawRevisao)  : [];
 
     // Ativa a primeira fonte que tenha dados
     if (ACORDOS_FONTES.geral.length > 0) fonteAtiva = 'geral';
