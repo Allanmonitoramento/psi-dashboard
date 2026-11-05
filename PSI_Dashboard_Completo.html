@@ -684,10 +684,10 @@ function renderFin() {
 
 // ── ACORDOS (via API — múltiplas abas) ──
 let filtroAtivo = 'Todos';
-let fonteAtiva  = 'geral'; // 'geral' | 'missao25' | 'missao26' | 'revisao'
+let fonteAtiva  = 'missao26'; // 'missao26' | 'revisao' | 'reunioes' | 'matriz'
 
 // Armazena dados de cada fonte
-const ACORDOS_FONTES = { geral: [], missao25: [], missao26: [], revisao: [] };
+const ACORDOS_FONTES = { missao26: [], revisao: [], reunioes: [], matriz: [] };
 
 // Parser para aba ACORDO GERAL
 // Colunas: Nível | Atividade | Responsável | Prazo | Status | Evidências
@@ -705,42 +705,22 @@ function parseAcordosGeral(rows) {
     }));
 }
 
-// Parser para abas de MISSÃO e REVISÃO DE CARTEIRA
-// Linha 0: título ("ATUALIZADO EM ...")
-// Linha 1: cabeçalho (Ação | ícone | ÓRGÃO | SETOR | RESP USE | RESP UCP | INÍCIO | PRAZO FINAL | STATUS | OBSERVAÇÃO)
-// Linha 2+: dados
-// Colunas: r[0]=Ação, r[2]=Órgão, r[3]=Setor, r[4]=Resp USE, r[5]=Resp UCP, r[6]=Início, r[7]=Prazo Final, r[8]=Status, r[9]=Observação
-const STATUS_VALIDOS = ['concluído', 'em andamento', 'em atraso', 'não iniciado', 'nao iniciado', 'cancelado', 'concluido'];
-
+// Parser para abas de MISSÃO e REVISÃO DE CARTEIRA (colunas padronizadas)
+// Linha 0: Título | Linha 1: Cabeçalho | Linha 2+: Dados
+// r[0]=Atividade  r[2]=Órgão  r[4]=Resp USE  r[5]=Resp UCP
+// r[7]=Prazo Final  r[8]=Status  r[9]=Observação
 function parseAcordosMissao(rows) {
   if (!rows || rows.length < 3) return [];
-
-  // Detecta a linha de início dos dados (pula título e cabeçalho)
-  // Procura a primeira linha onde r[8] contém um status válido
-  let startRow = 2;
-  for (let i = 1; i < Math.min(rows.length, 5); i++) {
-    const s = String(rows[i][8]||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-    if (STATUS_VALIDOS.some(v => s.includes(v.replace(/[̀-ͯ]/g,'')))) {
-      startRow = i;
-      break;
-    }
-  }
-
-  return rows.slice(startRow)
-    .filter(r => r[0] && String(r[0]).trim().length > 5) // ação deve ter texto real
-    .map(r => {
-      const respUse = String(r[4]||'').trim();
-      const respUcp = String(r[5]||'').trim();
-      const resp = [respUse, respUcp].filter(Boolean).join(' / ') || '—';
-      return {
-        nivel:     String(r[2]||'').trim() || String(r[3]||'').trim() || '—', // ÓRGÃO como nível/filtro
-        atividade: String(r[0]||'').trim(),
-        resp,
-        prazo:     String(r[7]||'').trim(),
-        status:    String(r[8]||'').trim(),
-        evidencia: String(r[9]||'').trim()
-      };
-    })
+  return rows.slice(2)
+    .filter(r => r[0] && String(r[0]).trim().length > 5)
+    .map(r => ({
+      nivel:     String(r[2]||'').trim() || '—',
+      atividade: String(r[0]||'').trim(),
+      resp:      [String(r[4]||'').trim(), String(r[5]||'').trim()].filter(Boolean).join(' / ') || '—',
+      prazo:     String(r[7]||'').trim(),
+      status:    String(r[8]||'').trim(),
+      evidencia: String(r[9]||'').trim()
+    }))
     .filter(a => a.atividade.length > 0);
 }
 
@@ -749,10 +729,10 @@ function dadosAcordosAtivos() {
 }
 
 const FONTES_CONFIG = {
-  geral:    { label: 'Acordo Geral 2026',       niveis: ['Todos','Reunião controle','Matriz de riscos','Carteira FIDA','RR5'], filtroLabel: 'Nível' },
-  missao25: { label: 'Acordos Missão 2025',     niveis: ['Todos'], filtroLabel: 'Órgão' },
-  missao26: { label: 'Acordos Missão 2026',     niveis: ['Todos'], filtroLabel: 'Órgão' },
-  revisao:  { label: 'Revisão de Carteira BID', niveis: ['Todos'], filtroLabel: 'Órgão' }
+  missao26: { label: 'Missão 2026',             niveis: ['Todos'], filtroLabel: 'Órgão' },
+  revisao:  { label: 'Revisão de Carteira BID', niveis: ['Todos'], filtroLabel: 'Órgão' },
+  reunioes: { label: 'Reuniões de Controle',    niveis: ['Todos'], filtroLabel: 'Órgão' },
+  matriz:   { label: 'Matriz de Riscos',        niveis: ['Todos'], filtroLabel: 'Órgão' }
 };
 
 function renderAcordos(filtro, fonte) {
@@ -1764,34 +1744,33 @@ async function carregarTudo() {
       findKey(dados, 'Perfil PAP', 'PERFIL PAP', 'perfil_pap', 'PERFIL_PAP')
     );
 
-    // Acordos — carrega todas as abas disponíveis
-    const rawGeral = findKey(dados,
-      'ACORDO GERAL- 2026', 'ACORDO GERAL-2026', 'ACORDO GERAL 2026',
-      'ACORDO_GERAL_2026', 'ACORDO_GERAL-2026'
-    );
-    const rawMissao25 = findKey(dados,
-      'ACORDOS MISSÃO 2025', 'ACORDOS MISSAO 2025', 'ACORDOS_MISSÃO_2025',
-      'ACORDOS_MISSAO_2025', 'ACORDOS MISSAO 2025'
-    );
+    // Acordos — carrega as 4 abas da planilha
     const rawMissao26 = findKey(dados,
-      'ACORDOS MISSÃO 2026', 'ACORDOS MISSAO 2026', 'ACORDOS_MISSÃO_2026',
-      'ACORDOS_MISSAO_2026', 'ACORDOS MISSAO 2026'
+      'MISSÃO 2026', 'MISSAO 2026',
+      'ACORDOS MISSÃO 2026', 'ACORDOS MISSAO 2026'
     );
     const rawRevisao = findKey(dados,
-      'ACORDOS REVISÃO DE CARTEIRA BID', 'ACORDOS REVISAO DE CARTEIRA BID',
-      'ACORDOS_REVISAO_DE_CARTEIRA_BID', 'ACORDOS REVISÃO CARTEIRA BID',
-      'ACORDOS REVISAO CARTEIRA BID'
+      'REVISÃO DE CARTEIRA BID', 'REVISAO DE CARTEIRA BID',
+      'REVISÃO CARTEIRA BID', 'REVISAO CARTEIRA BID'
+    );
+    const rawReunioes = findKey(dados,
+      'REUNIÕES DE CONTROLE', 'REUNIOES DE CONTROLE',
+      'REUNIÃO DE CONTROLE', 'REUNIAO DE CONTROLE',
+      'REUNIÕES CONTROLE', 'REUNIOES CONTROLE'
+    );
+    const rawMatriz = findKey(dados,
+      'MATRIZ DE RISCOS', 'MATRIZ_DE_RISCOS',
+      'MATRIZ RISCOS', 'MATRIZ_RISCOS'
     );
 
-    ACORDOS_FONTES.geral    = rawGeral    ? parseAcordosGeral(rawGeral)    : [];
-    ACORDOS_FONTES.missao25 = rawMissao25 ? parseAcordosMissao(rawMissao25) : [];
     ACORDOS_FONTES.missao26 = rawMissao26 ? parseAcordosMissao(rawMissao26) : [];
     ACORDOS_FONTES.revisao  = rawRevisao  ? parseAcordosMissao(rawRevisao)  : [];
+    ACORDOS_FONTES.reunioes = rawReunioes ? parseAcordosMissao(rawReunioes) : [];
+    ACORDOS_FONTES.matriz   = rawMatriz   ? parseAcordosMissao(rawMatriz)   : [];
 
     // Ativa a primeira fonte que tenha dados
-    if (ACORDOS_FONTES.geral.length > 0) fonteAtiva = 'geral';
-    else if (ACORDOS_FONTES.missao26.length > 0) fonteAtiva = 'missao26';
-    else if (ACORDOS_FONTES.missao25.length > 0) fonteAtiva = 'missao25';
+    const primeiraComDados = Object.keys(ACORDOS_FONTES).find(k => ACORDOS_FONTES[k].length > 0);
+    if (primeiraComDados) fonteAtiva = primeiraComDados;
 
     renderAcordos(filtroAtivo);
 
