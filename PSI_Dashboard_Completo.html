@@ -1666,7 +1666,7 @@ function renderCisternas(rows) {
   }
 
   const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
-  const findRow = (kw, from=0) => rows.findIndex((r,i) => i>=from && r.some(c => norm(c).includes(kw)));
+  const findRow = (kw, from=0, maxIdx=Infinity) => rows.findIndex((r,i) => i>=from && i<=maxIdx && r.some(c => norm(c).includes(kw)));
 
   const parseN = v => { const n = parseInt(String(v||'').replace(/\D/g,'')); return isNaN(n) ? 0 : n; };
   const parseR = v => {
@@ -1704,32 +1704,46 @@ function renderCisternas(rows) {
   // ── Bloco Pagamentos ──
   const iPagTitle = findRow('pagamento', iETotalRow >= 0 ? iETotalRow : 0);
 
-  // Localiza o cabeçalho próprio da tabela de pagamentos (linha com "empresa" após o título)
-  const iPagHdr = iPagTitle >= 0 ? findRow('empresa', iPagTitle + 1) : -1;
+  // Estrutura real: Título (iPagTitle) → linha seguinte tem os meses (cols 2+) → dados a partir de iPagTitle+2
+  // Não há linha com "empresa" — o cabeçalho de meses está logo após o título
+  const iPagHdrGuess = iPagTitle >= 0 ? findRow('empresa', iPagTitle + 1, iPagTitle + 4) : -1;
 
-  // Detecta colunas de meses do cabeçalho de PAGAMENTOS (independente do bloco de entregas)
+  // Se não achar "empresa", assume que iPagTitle+1 é o cabeçalho de meses
+  const iPagHdr = iPagHdrGuess >= 0 ? iPagHdrGuess : (iPagTitle >= 0 ? iPagTitle + 1 : -1);
+
+  // Detecta colunas de meses do cabeçalho de PAGAMENTOS
   const pHdr = iPagHdr >= 0 ? (rows[iPagHdr] || []) : [];
   const mesesColsP = pHdr.length > 0
     ? pHdr.map((c, i) => ({nome: String(c||'').trim(), idx: i}))
           .filter(({nome}) => /\w+\/\d{2}/.test(nome))
-    : mesesCols; // fallback: usa os mesmos índices do bloco de entregas
+    : mesesCols;
 
-  // Início dos dados: após o cabeçalho de pagamentos (ou título se não houver cabeçalho)
-  const iPagStart = iPagHdr >= 0 ? iPagHdr + 1 : (iPagTitle >= 0 ? iPagTitle + 1 : -1);
+  // Início dos dados: após o cabeçalho de meses
+  const iPagStart = iPagHdr >= 0 ? iPagHdr + 1 : -1;
   const iPagTotRow = iPagStart >= 0 ? findRow('total', iPagStart) : -1;
+
+  // Nome da empresa: col 1 se col 0 estiver vazia, senão col 0
+  const getNomeEmp = r => {
+    const c0 = String(r[0]||'').trim();
+    const c1 = String(r[1]||'').trim();
+    return c0.length > 1 ? c0 : c1;
+  };
 
   const pEmpresaRows = iPagStart >= 0
     ? rows.slice(iPagStart, iPagTotRow >= 0 ? iPagTotRow : rows.length)
-        .filter(r => r[0] && String(r[0]).trim()
-                  && !norm(r[0]).includes('total')
-                  && !norm(r[0]).includes('pagamento')
-                  && !norm(r[0]).includes('empresa'))
+        .filter(r => {
+          const nome = getNomeEmp(r);
+          return nome.length > 1
+            && !norm(nome).includes('total')
+            && !norm(nome).includes('pagamento')
+            && !norm(nome).includes('empresa')
+            && !norm(nome).includes('mes');
+        })
     : [];
 
   const empresasP = pEmpresaRows.map(r => {
-    // Usa os índices do cabeçalho próprio de pagamentos
     const meses = mesesColsP.map(({idx}) => parseR(r[idx]));
-    return { nome: String(r[0]).trim(), meses, total: meses.reduce((s,v)=>s+v,0) };
+    return { nome: getNomeEmp(r), meses, total: meses.reduce((s,v)=>s+v,0) };
   });
 
   // ── Totais ──
@@ -1805,19 +1819,7 @@ function renderCisternas(rows) {
             </tr>
           </thead>
           <tbody>
-            ${pagTbRows || `<tr><td colspan="99" style="background:#fff3cd;color:#222;padding:12px;font-size:11px;font-family:monospace;line-height:2">
-              <b style="color:red">DIAGNÓSTICO:</b>
-              iPagTitle=${iPagTitle} |
-              iPagHdr=${iPagHdr} |
-              iPagStart=${iPagStart} |
-              mesesColsP=${mesesColsP.length} |
-              pEmpresaRows=${pEmpresaRows.length} |
-              iETotalRow=${iETotalRow} |
-              totalLinhas=${rows.length}
-              <br>${iPagTitle>=0 ? 'TitleRow['+iPagTitle+']='+JSON.stringify((rows[iPagTitle]||[]).slice(0,5)) : 'TitleRow: NÃO ACHOU "pagamento"'}
-              <br>${iPagHdr>=0 ? 'HdrRow['+iPagHdr+']='+JSON.stringify((rows[iPagHdr]||[]).slice(0,8)) : 'HdrRow: NÃO ACHOU "empresa" após título'}
-              <br>${iPagStart>=0&&rows[iPagStart] ? 'DataRow0['+iPagStart+']='+JSON.stringify((rows[iPagStart]||[]).slice(0,5)) : 'DataRow0: vazio'}
-            </td></tr>`}
+            ${pagTbRows || `<tr><td colspan="99" style="color:var(--muted);padding:12px;font-size:12px;text-align:center">Aguardando dados de pagamento…</td></tr>`}
             <tr>
               <td style="font-weight:700;background:#f2f5fb">Total geral</td>
               ${pagTotalCols}
@@ -1968,4 +1970,5 @@ carregarTudo();
 </script>
 </body>
 </html>
+
 
