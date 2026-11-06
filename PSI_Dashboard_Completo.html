@@ -512,14 +512,29 @@ function statusCls(real, esp) {
   if (real >= esp*0.7) return 'yellow';
   return 'red';
 }
+// Normaliza status: minúsculas, sem acento, sem espaço duplo
+const normStatus = s => String(s||'').toLowerCase()
+  .normalize('NFD').replace(/[̀-ͯ]/g,'')
+  .replace(/\s+/g,' ').trim();
+
+function classifyStatus(s) {
+  const n = normStatus(s);
+  if (n.includes('conclu')) return 'concluido';
+  if (n.includes('andamento')) return 'andamento';
+  if (n.includes('atraso')) return 'atraso';
+  if (n.includes('nao inici') || n.includes('nao_inici') || n === '' || n === '—') return 'naoIniciado';
+  return 'naoIniciado';
+}
+
 function pillAcord(s) {
-  const m = {
-    'Concluído': ['pill-green','✓'],
-    'Em andamento': ['pill-yellow','↺'],
-    'Em atraso': ['pill-red','!'],
-    'Não iniciado': ['pill-grey','○']
+  const cls = classifyStatus(s);
+  const map = {
+    concluido:   ['pill-green', '✓'],
+    andamento:   ['pill-yellow','↺'],
+    atraso:      ['pill-red',   '!'],
+    naoIniciado: ['pill-grey',  '○']
   };
-  return m[s] || ['pill-grey','?'];
+  return map[cls] || ['pill-grey','?'];
 }
 
 /* ══════════════════════════════════════════════════
@@ -775,10 +790,8 @@ function renderAcordos(filtro, fonte) {
   const stats = {total:0,concluido:0,andamento:0,atraso:0,naoIniciado:0};
   ACORDOS_DATA.forEach(a => {
     stats.total++;
-    if(a.status==='Concluído') stats.concluido++;
-    else if(a.status==='Em andamento') stats.andamento++;
-    else if(a.status==='Em atraso') stats.atraso++;
-    else stats.naoIniciado++;
+    const cls = classifyStatus(a.status);
+    stats[cls]++;
   });
 
   const ORGAOS_FIXOS = ['Todos','SAF','SEPLAN','INTERPI','SEMAR','SADA'];
@@ -1904,5 +1917,4 @@ carregarTudo();
 </script>
 </body>
 </html>
-
 
