@@ -428,7 +428,10 @@ body {
 /* ══════════════════════════════════════════════════
    CONFIGURAÇÃO
 ══════════════════════════════════════════════════ */
-const API_PSI = 'https://script.google.com/macros/s/AKfycbxVyXETJEyhJKI_0fsxKCxSlx_lALRG0veIMubMLPE9kM2K2P6sQQq_01Y2XV6r2Doq/exec';
+// API principal — planilha com INDICADORES, CISTERNAS, PRODUTOS, etc.
+const API_PSI     = 'https://script.google.com/macros/s/AKfycbxiE6Ryl6iu0tcTB2loSS6-q29WeF7qOar2rARZOga187zZAApBD5uVnczeL_XO2kNc/exec';
+// API de Acordos — planilha com MISSÃO 2026, REVISÃO BID, REUNIÕES, MATRIZ
+const API_ACORDOS = 'https://script.google.com/macros/s/AKfycbxVyXETJEyhJKI_0fsxKCxSlx_lALRG0veIMubMLPE9kM2K2P6sQQq_01Y2XV6r2Doq/exec';
 
 // ACORDOS_DATA removido — usar ACORDOS_FONTES[fonte] ou dadosAcordosAtivos()
 let _debugVisible = false;
@@ -1715,66 +1718,81 @@ async function carregarTudo() {
   // Financeiro: dados embutidos (imediato)
   renderFin();
 
+  // Dispara as 2 APIs em paralelo
+  const [rPSI, rAcordos] = await Promise.allSettled([
+    fetch(API_PSI).then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }),
+    fetch(API_ACORDOS).then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+  ]);
+
   try {
-    const r = await fetch(API_PSI);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const dados = await r.json();
+    // ── Planilha principal ──
+    if (rPSI.status === 'fulfilled') {
+      const dados = rPSI.value;
+      _apiKeys = Object.keys(dados);
+      console.log('[PSI-API] Chaves principais:', _apiKeys);
 
-    // Registra chaves para debug
-    _apiKeys = Object.keys(dados);
-    console.log('[PSI-API] Chaves recebidas:', _apiKeys);
+      renderInd(
+        findKey(dados, 'INDICADORES')
+      );
+      renderProd(
+        findKey(dados, 'PRODUTOS_CRÍTICOS', 'PRODUTOS CRÍTICOS', 'PRODUTOS_CRITICOS', 'PRODUTOS CRITICOS')
+      );
+      renderAquis(
+        findKey(dados, 'AQUISIÇÕES', 'AQUISICOES')
+      );
+      renderOrcamento(
+        findKey(dados, 'ORÇAMENTO ORGÃO', 'ORÇAMENTO ÓRGÃO', 'ORCAMENTO ORGAO', 'ORÇAMENTO_ORGÃO', 'ORCAMENTO_ORGAO')
+      );
+      renderCisternas(
+        findKey(dados, 'ENTREGA DE CISTERNAS', 'ENTREGA_DE_CISTERNAS')
+      );
+      renderPAP(
+        findKey(dados, 'Perfil PAP', 'PERFIL PAP', 'perfil_pap', 'PERFIL_PAP')
+      );
+      renderVisaoGeral(dados);
+    } else {
+      console.error('[PSI-API] Falha planilha principal:', rPSI.reason);
+      ['ind','prod','aquis','orcamento','cisternas','pap'].forEach(id => {
+        const el = document.getElementById(id+'-content');
+        if (el) { el.className = 'state-box error'; el.innerHTML = `Não foi possível carregar os dados.<br><small>${rPSI.reason?.message||''}</small>`; }
+      });
+    }
 
-    // Usa findKey() — tolerante a acentos, espaços e maiúsculas
-    renderInd(
-      findKey(dados, 'INDICADORES')
-    );
-    renderProd(
-      findKey(dados, 'PRODUTOS_CRÍTICOS', 'PRODUTOS CRÍTICOS', 'PRODUTOS_CRITICOS', 'PRODUTOS CRITICOS')
-    );
-    renderAquis(
-      findKey(dados, 'AQUISIÇÕES', 'AQUISICOES')
-    );
-    renderOrcamento(
-      findKey(dados, 'ORÇAMENTO ORGÃO', 'ORÇAMENTO ÓRGÃO', 'ORCAMENTO ORGAO', 'ORÇAMENTO_ORGÃO', 'ORCAMENTO_ORGAO')
-    );
-    renderCisternas(
-      findKey(dados, 'ENTREGA DE CISTERNAS', 'ENTREGA_DE_CISTERNAS')
-    );
-    renderPAP(
-      findKey(dados, 'Perfil PAP', 'PERFIL PAP', 'perfil_pap', 'PERFIL_PAP')
-    );
+    // ── Planilha de Acordos ──
+    if (rAcordos.status === 'fulfilled') {
+      const ac = rAcordos.value;
+      console.log('[PSI-API] Chaves acordos:', Object.keys(ac));
 
-    // Acordos — carrega as 4 abas da planilha
-    const rawMissao26 = findKey(dados,
-      'MISSÃO 2026', 'MISSAO 2026',
-      'ACORDOS MISSÃO 2026', 'ACORDOS MISSAO 2026'
-    );
-    const rawRevisao = findKey(dados,
-      'REVISÃO DE CARTEIRA BID', 'REVISAO DE CARTEIRA BID',
-      'REVISÃO CARTEIRA BID', 'REVISAO CARTEIRA BID'
-    );
-    const rawReunioes = findKey(dados,
-      'REUNIÕES DE CONTROLE', 'REUNIOES DE CONTROLE',
-      'REUNIÃO DE CONTROLE', 'REUNIAO DE CONTROLE',
-      'REUNIÕES CONTROLE', 'REUNIOES CONTROLE'
-    );
-    const rawMatriz = findKey(dados,
-      'MATRIZ DE RISCOS', 'MATRIZ_DE_RISCOS',
-      'MATRIZ RISCOS', 'MATRIZ_RISCOS'
-    );
+      const rawMissao26 = findKey(ac,
+        'MISSÃO 2026', 'MISSAO 2026',
+        'ACORDOS MISSÃO 2026', 'ACORDOS MISSAO 2026'
+      );
+      const rawRevisao = findKey(ac,
+        'REVISÃO DE CARTEIRA BID', 'REVISAO DE CARTEIRA BID',
+        'REVISÃO CARTEIRA BID', 'REVISAO CARTEIRA BID'
+      );
+      const rawReunioes = findKey(ac,
+        'REUNIÕES DE CONTROLE', 'REUNIOES DE CONTROLE',
+        'REUNIÃO DE CONTROLE', 'REUNIAO DE CONTROLE',
+        'REUNIÕES CONTROLE', 'REUNIOES CONTROLE'
+      );
+      const rawMatriz = findKey(ac,
+        'MATRIZ DE RISCOS', 'MATRIZ_DE_RISCOS',
+        'MATRIZ RISCOS', 'MATRIZ_RISCOS'
+      );
 
-    ACORDOS_FONTES.missao26 = rawMissao26 ? parseAcordosMissao(rawMissao26) : [];
-    ACORDOS_FONTES.revisao  = rawRevisao  ? parseAcordosMissao(rawRevisao)  : [];
-    ACORDOS_FONTES.reunioes = rawReunioes ? parseAcordosMissao(rawReunioes) : [];
-    ACORDOS_FONTES.matriz   = rawMatriz   ? parseAcordosMissao(rawMatriz)   : [];
+      ACORDOS_FONTES.missao26 = rawMissao26 ? parseAcordosMissao(rawMissao26) : [];
+      ACORDOS_FONTES.revisao  = rawRevisao  ? parseAcordosMissao(rawRevisao)  : [];
+      ACORDOS_FONTES.reunioes = rawReunioes ? parseAcordosMissao(rawReunioes) : [];
+      ACORDOS_FONTES.matriz   = rawMatriz   ? parseAcordosMissao(rawMatriz)   : [];
+    } else {
+      console.error('[PSI-API] Falha acordos:', rAcordos.reason);
+    }
 
     // Ativa a primeira fonte que tenha dados
     const primeiraComDados = Object.keys(ACORDOS_FONTES).find(k => ACORDOS_FONTES[k].length > 0);
     if (primeiraComDados) fonteAtiva = primeiraComDados;
-
     renderAcordos(filtroAtivo);
-
-    renderVisaoGeral(dados);
 
     const now = new Date();
     const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')} · ${now.toLocaleDateString('pt-BR')}`;
@@ -1800,5 +1818,4 @@ carregarTudo();
 </script>
 </body>
 </html>
-
 
