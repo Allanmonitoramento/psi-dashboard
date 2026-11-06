@@ -1036,6 +1036,27 @@ function renderProd(rows) {
   const esp = percEsperado();
   const data = rows.slice(3).filter(r => r[0] && String(r[0]).trim() && r[0] !== '#');
 
+  // Conta status para KPI summary
+  let nV=0,nA=0,nR=0,nG=0;
+
+  const svgRing = (pct, color, size=80) => {
+    const r = (size/2) - 7;
+    const circ = 2*Math.PI*r;
+    const dash = Math.min(pct/100,1)*circ;
+    return `<svg width="${size}" height="${size}" style="transform:rotate(-90deg)">
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="#e8eef8" stroke-width="6"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="6"
+        stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round"/>
+    </svg>`;
+  };
+
+  const miniBar = (val, max, color) => {
+    const w = max > 0 ? Math.min(val/max*100,100).toFixed(0) : 0;
+    return `<div style="height:4px;background:#e8eef8;border-radius:2px;overflow:hidden">
+      <div style="height:100%;width:${w}%;background:${color};border-radius:2px;transition:width .4s"></div>
+    </div>`;
+  };
+
   const cards = data.map(r => {
     const nome=r[1]||'', comp=r[2]||'', resp=r[3]||'';
     const metaPOA = num(String(r[4]||'').replace(/\./g,''));
@@ -1047,41 +1068,83 @@ function renderProd(rows) {
     const pPOA = (real !== null && metaPOA && metaPOA > 0) ? real/metaPOA : null;
     const pFin = (real !== null && metaFin && metaFin > 0) ? real/metaFin : null;
     const sc   = statusCls(pFin, espU);
-    const pc   = {green:'pill-green',yellow:'pill-yellow',red:'pill-red',grey:'pill-grey'}[sc];
-    const pl   = {green:'No prazo',yellow:'Em andamento',red:'Crítico',grey:'Sem dado'}[sc];
-    const cPOA = pPOA !== null ? (pPOA>=espU*0.9?'var(--green-bar)':pPOA>=espU*0.7?'var(--yellow-bar)':'var(--red-bar)') : '#ccc';
-    const cFin = pFin !== null ? (pFin>=espU*0.9?'var(--green-bar)':pFin>=espU*0.7?'var(--yellow-bar)':'var(--red-bar)') : '#ccc';
-    return `<div class="prod-card">
-      <div class="prod-header">
-        <div>
-          <div class="prod-title">${nome}</div>
-          <div class="prod-comp">${comp} · ${resp}</div>
+    const color = {green:'#0e7c4a',yellow:'#d49000',red:'#e03c3f',grey:'#9aa3b0'}[sc];
+    const bg    = {green:'#e6f4ee',yellow:'#fef3db',red:'#fdeaea',grey:'#f0f2f5'}[sc];
+    const label = {green:'No prazo',yellow:'Em andamento',red:'Crítico',grey:'Sem dado'}[sc];
+    if(sc==='green') nV++; else if(sc==='yellow') nA++; else if(sc==='red') nR++; else nG++;
+
+    const pFinPct = pFin !== null ? (pFin*100).toFixed(1) : null;
+    const pPOAPct = pPOA !== null ? (pPOA*100).toFixed(1) : null;
+    const maxBar  = metaFin || metaPOA || 1;
+
+    return `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
+      <!-- Header colorido -->
+      <div style="background:${bg};border-bottom:1px solid ${color}22;padding:14px 16px;display:flex;align-items:center;gap:14px">
+        <div style="position:relative;flex-shrink:0;width:80px;height:80px;display:flex;align-items:center;justify-content:center">
+          ${svgRing(pFin!==null?pFin*100:0, color)}
+          <div style="position:absolute;text-align:center">
+            <div style="font-size:13px;font-weight:800;color:${color}">${pFinPct!==null?pFinPct+'%':'—'}</div>
+            <div style="font-size:8px;color:${color};opacity:.7;line-height:1.1">META<br>FINAL</div>
+          </div>
         </div>
-        <span class="pill ${pc}">${pl}</span>
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
-        Realizado: <strong>${real !== null ? real.toLocaleString('pt-BR') : '—'}</strong>
-        · Meta POA: ${metaPOA ? metaPOA.toLocaleString('pt-BR') : '—'}
-        · Meta Final: ${metaFin ? metaFin.toLocaleString('pt-BR') : '—'}
-        · Esperado: ${(espU*100).toFixed(1)}%
-      </div>
-      <div class="two-col">
-        <div>
-          <div class="bar-label">% Meta POA 2026: ${pPOA !== null ? pct(pPOA) : '—'}</div>
-          <div class="prog-wrap"><div class="prog-fill" style="width:${Math.min((pPOA||0)*100,100).toFixed(0)}%;background:${cPOA}"></div></div>
-        </div>
-        <div>
-          <div class="bar-label">% Meta Final: ${pFin !== null ? pct(pFin) : '—'}</div>
-          <div class="prog-wrap"><div class="prog-fill" style="width:${Math.min((pFin||0)*100,100).toFixed(0)}%;background:${cFin}"></div></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:4px">${nome}</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${comp}${resp?' · '+resp:''}</div>
+          <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:${color};background:${color}18;padding:3px 10px;border-radius:20px">
+            <span style="width:6px;height:6px;border-radius:50%;background:${color};display:inline-block"></span>${label}
+          </span>
         </div>
       </div>
-      ${obs ? `<div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5">${obs}</div>` : ''}
+      <!-- Métricas -->
+      <div style="padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+          <div style="text-align:center">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Realizado</div>
+            <div style="font-size:14px;font-weight:700;color:var(--text)">${real!==null?real.toLocaleString('pt-BR'):'—'}</div>
+          </div>
+          <div style="text-align:center;border-left:1px solid var(--border)">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Meta POA</div>
+            <div style="font-size:14px;font-weight:700;color:var(--text)">${metaPOA?metaPOA.toLocaleString('pt-BR'):'—'}</div>
+          </div>
+          <div style="text-align:center;border-left:1px solid var(--border)">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Meta Final</div>
+            <div style="font-size:14px;font-weight:700;color:var(--text)">${metaFin?metaFin.toLocaleString('pt-BR'):'—'}</div>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px">
+            <span>% Meta POA 2026</span><strong style="color:${color}">${pPOAPct!==null?pPOAPct+'%':'—'}</strong>
+          </div>
+          ${miniBar(real||0, metaPOA||0, color)}
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px">
+            <span>% Meta Final</span><strong style="color:${color}">${pFinPct!==null?pFinPct+'%':'—'}</strong>
+          </div>
+          ${miniBar(real||0, metaFin||0, color)}
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);padding-top:4px">
+          <span>Ritmo esperado</span><strong>${(espU*100).toFixed(1)}%</strong>
+        </div>
+        ${obs?`<div style="font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px;line-height:1.5">${obs}</div>`:''}
+      </div>
     </div>`;
   }).join('');
 
+  const total = nV+nA+nR+nG;
   document.getElementById('prod-content').outerHTML = `
   <div id="prod-content">
-    ${cards || '<div class="state-box">Nenhum produto crítico encontrado.</div>'}
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Total</div><div class="kpi-value">${total}</div></div>
+      <div class="kpi-card kpi-green"><div class="kpi-label">No prazo</div><div class="kpi-value">${nV}</div><div class="kpi-sub">${total?pct(nV/total):''}</div></div>
+      <div class="kpi-card kpi-yellow"><div class="kpi-label">Em andamento</div><div class="kpi-value">${nA}</div><div class="kpi-sub">${total?pct(nA/total):''}</div></div>
+      <div class="kpi-card kpi-red"><div class="kpi-label">Crítico</div><div class="kpi-value">${nR}</div><div class="kpi-sub">${total?pct(nR/total):''}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Ritmo esperado</div><div class="kpi-value">${pct(esp)}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">
+      ${cards || '<div class="state-box">Nenhum produto crítico encontrado.</div>'}
+    </div>
   </div>`;
 }
 
@@ -1678,7 +1741,19 @@ function renderCisternas(rows) {
             </tr>
           </thead>
           <tbody>
-            ${pagTbRows || '<tr><td colspan="99" style="color:var(--muted);text-align:center">Aguardando dados de pagamento.</td></tr>'}
+            ${pagTbRows || `<tr><td colspan="99" style="background:#fff3cd;color:#222;padding:12px;font-size:11px;font-family:monospace;line-height:2">
+              <b style="color:red">DIAGNÓSTICO:</b>
+              iPagTitle=${iPagTitle} |
+              iPagHdr=${iPagHdr} |
+              iPagStart=${iPagStart} |
+              mesesColsP=${mesesColsP.length} |
+              pEmpresaRows=${pEmpresaRows.length} |
+              iETotalRow=${iETotalRow} |
+              totalLinhas=${rows.length}
+              <br>${iPagTitle>=0 ? 'TitleRow['+iPagTitle+']='+JSON.stringify((rows[iPagTitle]||[]).slice(0,5)) : 'TitleRow: NÃO ACHOU "pagamento"'}
+              <br>${iPagHdr>=0 ? 'HdrRow['+iPagHdr+']='+JSON.stringify((rows[iPagHdr]||[]).slice(0,8)) : 'HdrRow: NÃO ACHOU "empresa" após título'}
+              <br>${iPagStart>=0&&rows[iPagStart] ? 'DataRow0['+iPagStart+']='+JSON.stringify((rows[iPagStart]||[]).slice(0,5)) : 'DataRow0: vazio'}
+            </td></tr>`}
             <tr>
               <td style="font-weight:700;background:#f2f5fb">Total geral</td>
               ${pagTotalCols}
@@ -1829,6 +1904,5 @@ carregarTudo();
 </script>
 </body>
 </html>
-
 
 
