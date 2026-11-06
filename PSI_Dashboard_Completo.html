@@ -1435,50 +1435,39 @@ function renderOrcamento(rows) {
   const pCompG = gDisp > 0 ? gComp/gDisp : 0;
   const pExecG = gDisp > 0 ? gExec/gDisp : 0;
 
-  // Cards por órgão
-  const orgCards = orgTotais.map(o => {
-    const pComp  = o.disp > 0 ? o.comp/o.disp  : 0;
-    const pExec  = o.disp > 0 ? o.exec/o.disp  : 0;
-    const pSaldo = o.disp > 0 ? o.saldo/o.disp : 0;
-
-    const linha = (label, valor, perc, cor, altura='7px') => `
-      <div style="margin-bottom:13px">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-bottom:4px">
-          <span style="color:var(--muted);font-weight:500">${label}</span>
-          <span>
-            <strong style="color:var(--text);font-size:12px">${fmtUS(valor)}</strong>
-            ${perc !== null ? `<span style="color:${cor};font-weight:700;margin-left:4px">${pct(perc)}</span>` : ''}
-          </span>
-        </div>
-        <div class="prog-wrap" style="height:${altura}">
-          <div class="prog-fill" style="width:${perc !== null ? Math.min(perc*100,100).toFixed(0) : 100}%;background:${cor}"></div>
-        </div>
-      </div>`;
-
+  // Cards com mini-gráfico horizontal por órgão
+  const orgCards = orgTotais.map((o, idx) => {
+    const pComp = o.disp > 0 ? (o.comp/o.disp*100).toFixed(1) : '0';
+    const pExec = o.disp > 0 ? (o.exec/o.disp*100).toFixed(1) : '0';
+    const saldoColor = o.saldo >= 0 ? 'var(--green)' : 'var(--red)';
     return `
     <div class="card" style="border-top:3px solid ${o.cor}">
-      <div style="font-size:15px;font-weight:700;color:${o.cor};margin-bottom:16px">${o.nome}</div>
-      ${linha('Disponível',   o.disp,  null,  '#dde3ef', '6px')}
-      ${linha('Comprometido', o.comp,  pComp, o.cor+'99')}
-      ${linha('Executado',    o.exec,  pExec, o.cor)}
-      <div style="display:flex;justify-content:space-between;align-items:center;
-                  padding:8px 10px;background:${o.cor}10;border-radius:6px;margin-top:4px">
-        <span style="font-size:11px;color:var(--muted);font-weight:500">Saldo disponível</span>
-        <span style="font-size:13px;font-weight:700;color:${o.saldo>=0?'var(--green)':'var(--red)'}">${fmtUS(o.saldo)}</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="font-size:15px;font-weight:700;color:${o.cor}">${o.nome}</span>
+        <span style="font-size:11px;background:${o.cor}18;color:${o.cor};padding:3px 8px;border-radius:20px;font-weight:600">
+          Exec. ${pExec}%
+        </span>
+      </div>
+      <div class="chart-wrap" style="height:160px">
+        <canvas id="chart-orc-${idx}"></canvas>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+        <div style="font-size:11px;color:var(--muted)">Comprometido <strong style="color:var(--text);display:block;font-size:12px">${fmtUS(o.comp)} <span style="color:${o.cor};font-size:10px">${pComp}%</span></strong></div>
+        <div style="font-size:11px;color:var(--muted)">Executado <strong style="color:var(--text);display:block;font-size:12px">${fmtUS(o.exec)} <span style="color:${o.cor};font-size:10px">${pExec}%</span></strong></div>
+        <div style="font-size:11px;color:var(--muted)">Disponível <strong style="color:var(--text);display:block;font-size:12px">${fmtUS(o.disp)}</strong></div>
+        <div style="font-size:11px;color:var(--muted)">Saldo <strong style="color:${saldoColor};display:block;font-size:12px">${fmtUS(o.saldo)}</strong></div>
       </div>
     </div>`;
   }).join('');
 
-  // Gráfico de barras comparativo (comprometido vs executado)
   document.getElementById('orcamento-content').outerHTML = `
   <div id="orcamento-content">
 
-    <!-- KPIs consolidados do projeto -->
     <div class="kpi-grid">
       <div class="kpi-card kpi-blue">
         <div class="kpi-label">Total disponível</div>
         <div class="kpi-value" style="font-size:16px">${fmtUS(gDisp)}</div>
-        <div class="kpi-sub">Comp. 1 + 2 + 3 · todos os órgãos</div>
+        <div class="kpi-sub">Comp. 1+2+3 · todos os órgãos</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Comprometido</div>
@@ -1497,67 +1486,43 @@ function renderOrcamento(rows) {
       </div>
     </div>
 
-    <!-- Cards 2 × 2 por órgão -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       ${orgCards}
-    </div>
-
-    <!-- Gráfico comparativo -->
-    <div class="card">
-      <div class="card-title">Comparativo por órgão — Disponível · Comprometido · Executado (US$)</div>
-      <div class="chart-wrap" style="height:240px">
-        <canvas id="chart-orc"></canvas>
-      </div>
     </div>
 
   </div>`;
 
-  // Renderiza gráfico
+  // Mini-gráficos horizontais por órgão
   if (chartOrc) { chartOrc.destroy(); chartOrc = null; }
-  chartOrc = new Chart(document.getElementById('chart-orc'), {
-    type: 'bar',
-    data: {
-      labels: orgTotais.map(o => o.nome),
-      datasets: [
-        {
-          label: 'Disponível',
-          data: orgTotais.map(o => o.disp),
-          backgroundColor: orgTotais.map(o => o.cor + '33'),
-          borderColor:     orgTotais.map(o => o.cor),
-          borderWidth: 1, borderRadius: 4
-        },
-        {
-          label: 'Comprometido',
-          data: orgTotais.map(o => o.comp),
-          backgroundColor: orgTotais.map(o => o.cor + '88'),
-          borderWidth: 0, borderRadius: 4
-        },
-        {
-          label: 'Executado',
-          data: orgTotais.map(o => o.exec),
-          backgroundColor: orgTotais.map(o => o.cor),
-          borderWidth: 0, borderRadius: 4
-        }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'bottom', labels: { font:{size:11}, padding:14 } },
-        tooltip: {
-          callbacks: {
-            label: ctx => ` ${ctx.dataset.label}: ${fmtUS(ctx.parsed.y)}`
-          }
-        }
+  orgTotais.forEach((o, idx) => {
+    const cv = document.getElementById(`chart-orc-${idx}`);
+    if (!cv) return;
+    new Chart(cv, {
+      type: 'bar',
+      data: {
+        labels: ['Disponível','Comprometido','Executado','Saldo'],
+        datasets: [{
+          data: [o.disp, o.comp, o.exec, Math.max(o.saldo,0)],
+          backgroundColor: [o.cor+'33', o.cor+'77', o.cor, '#0e7c4a44'],
+          borderColor:     [o.cor,      o.cor,      o.cor, '#0e7c4a'],
+          borderWidth: 1,
+          borderRadius: 5,
+          borderSkipped: false
+        }]
       },
-      scales: {
-        x: { grid:{display:false}, ticks:{color:'#6b7585',font:{size:11}} },
-        y: {
-          grid:{color:'#eaedf2'},
-          ticks:{color:'#6b7585', font:{size:10}, callback: v => 'US$'+(v/1e6).toFixed(1)+'mi'}
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ` ${fmtUS(ctx.parsed.x)}` } }
+        },
+        scales: {
+          x: { grid:{color:'#eaedf2'}, ticks:{color:'#6b7585',font:{size:9}, callback: v => 'US$'+(v/1e6).toFixed(1)+'mi'} },
+          y: { grid:{display:false}, ticks:{color:'#6b7585',font:{size:11,weight:'600'}} }
         }
       }
-    }
+    });
   });
 }
 
@@ -1864,4 +1829,5 @@ carregarTudo();
 </script>
 </body>
 </html>
+
 
