@@ -1472,10 +1472,10 @@ function renderOrcamento(rows) {
 
   const allData = rows.slice(2).filter(r => r[0] && String(r[0]).trim());
 
-  // Usa sub-componentes (1.1, 1.2, 2.1...) que têm Comprometido/Executado/Saldo preenchidos
-  // As linhas "Componente 1/2/3" são agregados com esses campos vazios — evitar double-count
-  const subRows = allData.filter(r => /^\d+\.\d+/.test(String(r[0]||'').trim()));
-  const compRows = subRows.length > 0 ? subRows
+  // Lê diretamente a linha "TOTAL GERAL" que já tem todos os valores somados pela planilha
+  const totalGeralRow = rows.find(r => nrmOrc(r[0]).includes('total geral') || nrmOrc(r[0]).includes('total_geral'));
+  // compRows usado apenas como fallback para detectar que há dados (não para somar)
+  const compRows = totalGeralRow ? [totalGeralRow]
     : allData.filter(r => /^componente\s+[123]/i.test(nrmOrc(r[0])));
 
   // Detecta colunas dinamicamente a partir do cabeçalho
@@ -1959,5 +1959,4 @@ carregarTudo();
 </script>
 </body>
 </html>
-
 
