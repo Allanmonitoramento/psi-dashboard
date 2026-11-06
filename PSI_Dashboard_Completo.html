@@ -669,16 +669,27 @@ function renderFin() {
 
   if (chartFin) { chartFin.destroy(); chartFin = null; }
   const labels = FIN_DATA.secretarias.map(s => s.nome.split('—')[0].trim());
-  const vals   = FIN_DATA.secretarias.map(s => s.totalPago);
-  const colors = ['#1352a2','#0e7c4a','#d49000','#e03c3f','#6b7585'];
+  const siglas = ['SAF','INTERPI','SEPLAN','SEMAR','SADA'];
+
+  // Gráfico agrupado: 2024 / 2025 / 2026 por secretaria
   chartFin = new Chart(document.getElementById('chart-fin'), {
     type: 'bar',
-    data: { labels, datasets: [{ data: vals, backgroundColor: colors, borderRadius: 5, borderSkipped: false }] },
+    data: {
+      labels: siglas,
+      datasets: [
+        { label: '2024', data: FIN_DATA.secretarias.map(s=>s.total2024), backgroundColor:'#93b4e0', borderRadius:4, borderSkipped:false },
+        { label: '2025', data: FIN_DATA.secretarias.map(s=>s.total2025), backgroundColor:'#1352a2', borderRadius:4, borderSkipped:false },
+        { label: '2026', data: FIN_DATA.secretarias.map(s=>s.total2026), backgroundColor:'#0e7c4a', borderRadius:4, borderSkipped:false }
+      ]
+    },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display:true, position:'top', labels:{font:{size:11},boxWidth:12,color:'#6b7585'} },
+        tooltip: { callbacks: { label: ctx => ` R$ ${(ctx.parsed.y/1e6).toFixed(2)} mi` } }
+      },
       scales: {
-        x: { grid:{display:false}, ticks:{color:'#6b7585',font:{size:10}} },
+        x: { grid:{display:false}, ticks:{color:'#6b7585',font:{size:11}} },
         y: { grid:{color:'#eaedf2'}, ticks:{color:'#6b7585',font:{size:10},callback: v => 'R$'+(v/1e6).toFixed(1)+'mi'} }
       }
     }
@@ -770,9 +781,14 @@ function renderAcordos(filtro, fonte) {
     else stats.naoIniciado++;
   });
 
-  const dados = filtroAtivo === 'Todos'
-    ? ACORDOS_DATA
-    : ACORDOS_DATA.filter(a => a.nivel === filtroAtivo);
+  const ORGAOS_FIXOS = ['Todos','SAF','SEPLAN','INTERPI','SEMAR','SADA'];
+
+  const matchOrgao = (nivel, filtro) => {
+    if (filtro === 'Todos') return true;
+    return String(nivel||'').toUpperCase().includes(filtro.toUpperCase());
+  };
+
+  const dados = ACORDOS_DATA.filter(a => matchOrgao(a.nivel, filtroAtivo));
 
   const rows = dados.map((a,i) => {
     const [cls,ic] = pillAcord(a.status);
@@ -787,10 +803,6 @@ function renderAcordos(filtro, fonte) {
     </tr>`;
   }).join('');
 
-  const filterBtns = niveis.map(n =>
-    `<button class="filter-btn ${filtroAtivo===n?'active':''}" onclick="renderAcordos('${n}')">${n}</button>`
-  ).join('');
-
   // Abas de fonte
   const fonteBtns = Object.entries(FONTES_CONFIG).map(([k, v]) => {
     const cnt = ACORDOS_FONTES[k].length;
@@ -798,6 +810,11 @@ function renderAcordos(filtro, fonte) {
     const active = k === fonteAtiva ? 'active' : '';
     return `<button class="filter-btn ${active}" onclick="renderAcordos('Todos','${k}')" ${disabled}>${v.label}${cnt > 0 ? ` <span style="font-size:9px;opacity:.7">(${cnt})</span>` : ' ⚠️'}</button>`;
   }).join('');
+
+  // Dropdown órgão
+  const opts = ORGAOS_FIXOS.map(o =>
+    `<option value="${o}" ${filtroAtivo===o?'selected':''}>${o}</option>`
+  ).join('');
 
   document.getElementById('acordos-content').outerHTML = `
   <div id="acordos-content">
@@ -815,13 +832,21 @@ function renderAcordos(filtro, fonte) {
       <div class="kpi-card"><div class="kpi-label">Não iniciados</div><div class="kpi-value">${stats.naoIniciado}</div><div class="kpi-sub">${pct(stats.naoIniciado/stats.total)}</div></div>
     </div>
     <div class="card acord-table">
-      <div class="card-title">${cfg.label} — ${filtroAtivo} (${dados.length} registros)</div>
-      <div class="acord-filters">${filterBtns}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div class="card-title" style="margin:0">${cfg.label} — ${dados.length} registros</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:11px;color:var(--muted);font-weight:600">Filtrar por órgão:</label>
+          <select onchange="renderAcordos(this.value)"
+            style="font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer">
+            ${opts}
+          </select>
+        </div>
+      </div>
       <div style="overflow-x:auto">
         <table class="tbl">
           <thead><tr>
             <th style="width:32px">#</th>
-            <th>Nível</th><th>Atividade</th><th>Responsável</th>
+            <th>Órgão</th><th>Atividade</th><th>Responsável</th>
             <th>Prazo</th><th>Status</th><th>Evidências</th>
           </tr></thead>
           <tbody>${rows}</tbody>
@@ -937,29 +962,38 @@ function renderInd(rows) {
   }
   const esp = percEsperado();
   const data = rows.slice(3).filter(r => r[0] && String(r[0]).trim() && r[0] !== 'Cód.');
-  let nV=0, nA=0, nR=0;
+    let nV=0, nA=0, nR=0;
+  const indChartData = [];
 
-  const itens = data.map(r => {
+  const cards = data.map((r, idx) => {
     const cod=r[0]||'', nome=r[1]||'', lb=r[3]||'', meta=r[4]||'', real=r[5], obs=r[8]||'';
     const realN = num(real);
     const metaN = num(String(meta).replace(/\./g,''));
     const prog = (realN !== null && metaN && metaN > 0) ? realN/metaN : null;
     const sc = statusCls(prog, esp);
-    const dc = {green:'dot-green',yellow:'dot-yellow',red:'dot-red',grey:'dot-grey'}[sc];
     const pc = {green:'pill-green',yellow:'pill-yellow',red:'pill-red',grey:'pill-grey'}[sc];
-    const bc = {green:'var(--green-bar)',yellow:'var(--yellow-bar)',red:'var(--red-bar)',grey:'#ccc'}[sc];
-    const pl = {green:'No prazo',yellow:'Em andamento',red:'Crítico',grey:'Sem dado'}[sc];
+    const pl = {green:'✓ No prazo',yellow:'↺ Em andamento',red:'⚠ Crítico',grey:'— Sem dado'}[sc];
+    const color = {green:'#0e7c4a',yellow:'#d49000',red:'#e03c3f',grey:'#ccc'}[sc];
     if(sc==='green') nV++; else if(sc==='yellow') nA++; else if(sc==='red') nR++;
-    const bw = prog !== null ? Math.min(prog*100, 100).toFixed(0) : 0;
-    return `<div class="ind-row">
-      <div style="display:flex;align-items:flex-start;gap:7px"><span class="dot ${dc}" style="margin-top:3px;flex-shrink:0"></span><span><strong>${cod}</strong> ${nome}</span></div>
-      <div style="color:var(--muted);font-size:11px">${lb} → ${meta}</div>
-      <div style="color:var(--text);font-size:11px">${realN !== null ? realN.toLocaleString('pt-BR') : '—'}</div>
-      <div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">${prog !== null ? pct(prog) : '—'}</div>
-        <div class="prog-wrap"><div class="prog-fill" style="width:${bw}%;background:${bc}"></div></div>
+    const bw = prog !== null ? Math.min(prog*100,100) : 0;
+    const cid = `ind-chart-${idx}`;
+    indChartData.push({cid, bw, color});
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;gap:14px;align-items:flex-start">
+      <div style="flex-shrink:0;position:relative;width:72px;height:72px">
+        <canvas id="${cid}" width="72" height="72"></canvas>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${color}">${prog!==null?Math.round(bw)+'%':'—'}</div>
       </div>
-      <div><span class="pill ${pc}">${pl}</span></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:2px">${cod}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:6px">${nome}</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-bottom:6px">
+          <span>LB: <strong>${lb}</strong></span>
+          <span>Meta: <strong>${meta}</strong></span>
+          <span>Realizado: <strong style="color:var(--text)">${realN!==null?realN.toLocaleString('pt-BR'):'—'}</strong></span>
+        </div>
+        <span class="pill ${pc}">${pl}</span>
+        ${obs?`<div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4">${obs}</div>`:''}
+      </div>
     </div>`;
   }).join('');
 
@@ -974,10 +1008,22 @@ function renderInd(rows) {
     </div>
     <div class="card">
       <div class="card-title">Indicadores — Teoria da Mudança</div>
-      <div class="ind-header"><div>Indicador</div><div>LB → Meta</div><div>Realizado</div><div>% Progresso</div><div>Status</div></div>
-      ${itens || '<div style="padding:20px;color:var(--muted)">Nenhum indicador encontrado.</div>'}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px;margin-top:4px">
+        ${cards || '<div style="padding:20px;color:var(--muted)">Nenhum indicador encontrado.</div>'}
+      </div>
     </div>
   </div>`;
+
+  // Renderiza mini-roscas
+  indChartData.forEach(({cid, bw, color}) => {
+    const cv = document.getElementById(cid);
+    if (!cv) return;
+    new Chart(cv, {
+      type: 'doughnut',
+      data: { datasets: [{ data: [bw, Math.max(0,100-bw)], backgroundColor: [color, '#e8eef8'], borderWidth: 0 }] },
+      options: { cutout:'72%', plugins:{legend:{display:false},tooltip:{enabled:false}}, animation:{duration:600} }
+    });
+  });
 }
 
 // ── PRODUTOS CRÍTICOS ──
