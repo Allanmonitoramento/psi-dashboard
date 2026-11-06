@@ -980,21 +980,29 @@ function renderInd(rows) {
 
   const cards = data.map((r, idx) => {
     const cod=r[0]||'', nome=r[1]||'', lb=r[3]||'', meta=r[4]||'', real=r[5], obs=r[8]||'';
-    const realN = num(real);
-    const metaN = num(String(meta).replace(/\./g,''));
+    // Remove pontos (separador de milhar BR) antes de parsear — "127.649" → 127649
+    const realN = num(String(real||'').replace(/\./g,'').replace(',','.'));
+    const metaN = num(String(meta||'').replace(/\./g,'').replace(',','.'));
     const prog = (realN !== null && metaN && metaN > 0) ? realN/metaN : null;
     const sc = statusCls(prog, esp);
     const pc = {green:'pill-green',yellow:'pill-yellow',red:'pill-red',grey:'pill-grey'}[sc];
     const pl = {green:'✓ No prazo',yellow:'↺ Em andamento',red:'⚠ Crítico',grey:'— Sem dado'}[sc];
     const color = {green:'#0e7c4a',yellow:'#d49000',red:'#e03c3f',grey:'#ccc'}[sc];
     if(sc==='green') nV++; else if(sc==='yellow') nA++; else if(sc==='red') nR++;
-    const bw = prog !== null ? Math.min(prog*100,100) : 0;
+    const progPct = prog !== null ? prog*100 : 0;
+    const bw = Math.min(progPct, 100);
+    const superada = prog !== null && prog >= 1.0;
+    const ringLabel = prog === null ? '—' : superada ? '✓' : Math.round(bw)+'%';
+    const ringFontSize = superada ? '16px' : '11px';
     const cid = `ind-chart-${idx}`;
     indChartData.push({cid, bw, color});
     return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;gap:14px;align-items:flex-start">
       <div style="flex-shrink:0;position:relative;width:72px;height:72px">
         <canvas id="${cid}" width="72" height="72"></canvas>
-        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${color}">${prog!==null?Math.round(bw)+'%':'—'}</div>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0">
+          <span style="font-size:${ringFontSize};font-weight:700;color:${color};line-height:1">${ringLabel}</span>
+          ${superada?`<span style="font-size:8px;color:${color};opacity:.8;line-height:1">${Math.round(progPct)}%</span>`:''}
+        </div>
       </div>
       <div style="flex:1;min-width:0">
         <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:2px">${cod}</div>
@@ -1959,4 +1967,5 @@ carregarTudo();
 </script>
 </body>
 </html>
+
 
