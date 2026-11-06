@@ -1465,19 +1465,58 @@ function renderOrcamento(rows) {
     return;
   }
 
+  const nrmOrc = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+
+  // Log diagnóstico
+  console.log('[ORC DIAG rows0-3]', JSON.stringify(rows.slice(0,4).map(r=>(r||[]).slice(0,20))));
+
   const allData = rows.slice(2).filter(r => r[0] && String(r[0]).trim());
 
   // Apenas as 3 linhas principais de componente (não sub-componentes)
   const compRows = allData.filter(r =>
-    /^componente\s+[123]/i.test(String(r[0]).trim().normalize('NFD').replace(/[\u0300-\u036f]/g,''))
+    /^componente\s+[123]/i.test(nrmOrc(r[0]))
   );
 
-  const orgs = [
+  // Detecta colunas dinamicamente a partir do cabeçalho
+  const hdr0 = rows[0] || [];
+  const hdr1 = rows[1] || [];
+  const orgCores = {SEPLAN:'#1352a2',INTERPI:'#0e7c4a',SAF:'#d49000',SEMARH:'#7b3fa0',SEMAR:'#c0392b',SADA:'#2980b9'};
+
+  function detectOrgCols(hdrRow) {
+    const orgMap = {};
+    let curOrg = null;
+    hdrRow.forEach((cell, ci) => {
+      const c = nrmOrc(cell);
+      for (const o of ['SEPLAN','INTERPI','SAF','SEMARH','SEMAR','SADA']) {
+        if (c === o.toLowerCase() || c.startsWith(o.toLowerCase()+' ') || c.startsWith(o.toLowerCase()+':')) {
+          curOrg = o; orgMap[o] = orgMap[o] || {disp:null,comp:null,exec:null,saldo:null};
+        }
+      }
+      if (curOrg) {
+        if (c.includes('disponiv')) orgMap[curOrg].disp = ci;
+        else if (c.includes('comprom')) orgMap[curOrg].comp = ci;
+        else if (c.includes('execut'))  orgMap[curOrg].exec  = ci;
+        else if (c.includes('saldo'))   orgMap[curOrg].saldo = ci;
+      }
+    });
+    return orgMap;
+  }
+
+  let orgMap = detectOrgCols(hdr1);
+  if (Object.keys(orgMap).length < 2) orgMap = detectOrgCols(hdr0);
+  const detectedOrgs = Object.entries(orgMap).filter(([,ci]) => ci.disp !== null);
+  console.log('[ORC DIAG orgMap]', JSON.stringify(orgMap));
+
+  // Fallback fixo se detecção automática falhar
+  const fallbackOrgs = [
     {nome:'SEPLAN',  cor:'#1352a2', ci:{disp:2,  comp:3,  exec:4,  saldo:5}},
     {nome:'INTERPI', cor:'#0e7c4a', ci:{disp:6,  comp:7,  exec:8,  saldo:9}},
     {nome:'SAF',     cor:'#d49000', ci:{disp:10, comp:11, exec:12, saldo:13}},
     {nome:'SEMARH',  cor:'#7b3fa0', ci:{disp:14, comp:15, exec:16, saldo:17}},
   ];
+  const orgs = detectedOrgs.length >= 2
+    ? detectedOrgs.map(([nome, ci]) => ({nome, cor: orgCores[nome]||'#555', ci}))
+    : fallbackOrgs;
 
   const parseV = v => {
     const n = parseFloat(String(v||'').replace(/\./g,'').replace(',','.').replace(/[^\d.\-]/g,''));
@@ -1562,11 +1601,23 @@ function renderOrcamento(rows) {
       </div>
     </div>
 
+    <!-- DIAGNÓSTICO ORÇAMENTO: remove após confirmar estrutura -->
+    <details style="margin-bottom:12px">
+      <summary style="font-size:11px;color:var(--muted);cursor:pointer">🔍 Diagnóstico de colunas (clique para ver)</summary>
+      <pre style="font-size:10px;background:#f5f7fb;padding:10px;border-radius:6px;overflow:auto;max-height:200px;line-height:1.5;margin-top:6px">
+Orgs detectados: ${JSON.stringify(orgs.map(o=>({nome:o.nome,ci:o.ci})))}
+compRows count: ${compRows.length}
+Linha 0: ${JSON.stringify((rows[0]||[]).slice(0,20))}
+Linha 1: ${JSON.stringify((rows[1]||[]).slice(0,20))}
+Linha 2: ${JSON.stringify((rows[2]||[]).slice(0,20))}
+Linha 3: ${JSON.stringify((rows[3]||[]).slice(0,20))}
+      </pre>
+    </details>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       ${orgCards}
     </div>
 
-  </div>`;
+  </div>\`;
 
   // Mini-gráficos horizontais por órgão
   if (chartOrc) { chartOrc.destroy(); chartOrc = null; }
