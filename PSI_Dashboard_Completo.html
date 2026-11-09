@@ -741,48 +741,65 @@ function parseAcordosGeral(rows) {
 function parseAcordosMissao(rows) {
   if (!rows || rows.length < 3) return [];
 
-  // Auto-detectar colunas a partir do cabeçalho (linha 0 ou 1)
+  /* ── Detecção automática de colunas ──────────────────────────────
+     Estrutura atual padronizada (4 abas):
+     0: ACORDOS   1: ÓRGÃO    2: SETOR        3: RESP USE
+     4: RESP UCP  5: INÍCIO   6: RAZO FINA    7: STATUS
+     8: OBERVAÇÃO 9: INDICADOR VINCULADO
+     A detecção busca pelos nomes no cabeçalho com fallback nos índices. */
   const normHdr = s => String(s||'').toLowerCase()
     .normalize('NFD').replace(/[̀-ͯ]/g,'')
     .replace(/[\s_-]+/g,' ').trim();
 
-  // Pega linha de cabeçalho (preferir a que tem mais colunas preenchidas)
   const hdr0 = rows[0] || [];
   const hdr1 = rows[1] || [];
   const hdr = hdr0.filter(Boolean).length >= hdr1.filter(Boolean).length ? hdr0 : hdr1;
 
-  const colIdx = key => {
-    const idx = hdr.findIndex(c => normHdr(c).includes(key));
-    return idx >= 0 ? idx : null;
+  const colIdx = (...keys) => {
+    for (const key of keys) {
+      const idx = hdr.findIndex(c => normHdr(c).includes(key));
+      if (idx >= 0) return idx;
+    }
+    return null;
   };
 
-  const iAtvd  = colIdx('atividade') ?? colIdx('acao') ?? colIdx('descricao') ?? 0;
-  const iNivel = colIdx('nivel') ?? colIdx('orgao') ?? colIdx('orgao') ?? 2;
-  const iResp1 = colIdx('responsavel') ?? colIdx('resp') ?? 4;
-  const iResp2 = colIdx('responsavel 2') ?? colIdx('resp2') ?? 5;
-  const iPrazo = colIdx('prazo') ?? colIdx('data') ?? 7;
-  const iStat  = colIdx('status') ?? colIdx('situacao') ?? colIdx('sit') ?? 8;
-  const iEvid  = colIdx('evidencia') ?? colIdx('evidencias') ?? colIdx('observacao') ?? 9;
+  // Fallbacks refletem a estrutura padronizada nova
+  const iAtvd    = colIdx('acordo','atividade','acao','descricao') ?? 0;
+  const iOrgao   = colIdx('orgao','nivel','org') ?? 1;
+  const iSetor   = colIdx('setor','area') ?? 2;
+  const iRespUse = colIdx('responsavel use','resp use','use') ?? 3;
+  const iRespUcp = colIdx('responsavel ucp','resp ucp','ucp') ?? 4;
+  const iInicio  = colIdx('inicio','data inicio') ?? 5;
+  const iPrazo   = colIdx('razo','prazo','data prazo','data final','data limite') ?? 6;
+  const iStat    = colIdx('status','situacao','sit') ?? 7;
+  const iObs     = colIdx('observ','evidencia','obervacao') ?? 8;
+  const iInd     = colIdx('indicador','ind vinc') ?? 9;
 
-  console.log('[PSI-Acordos] Cabeçalho detectado:', hdr);
-  console.log('[PSI-Acordos] Colunas detectadas: atividade='+iAtvd+' nivel='+iNivel+' resp='+iResp1+'/'+iResp2+' prazo='+iPrazo+' status='+iStat+' evidencia='+iEvid);
+  console.log('[PSI-Acordos] Cabeçalho:', JSON.stringify(hdr));
+  console.log('[PSI-Acordos] Colunas → orgao='+iOrgao+' setor='+iSetor+' respUse='+iRespUse+
+    ' respUcp='+iRespUcp+' inicio='+iInicio+' prazo='+iPrazo+' status='+iStat+
+    ' obs='+iObs+' indicador='+iInd);
 
-  // Verificar primeiras linhas de dados para debug
-  const dataRows = rows.slice(2).filter(r => r[0] && String(r[0]).trim().length > 5);
-  if (dataRows.length > 0) {
-    console.log('[PSI-Acordos] Primeiros status detectados:', dataRows.slice(0,5).map(r => JSON.stringify(String(r[iStat]||''))));
-  }
+  const dataRows = rows.slice(2).filter(r => r[iAtvd] && String(r[iAtvd]).trim().length > 3);
 
-  return dataRows
-    .map(r => ({
-      nivel:     String(r[iNivel]||'').trim() || '—',
-      atividade: String(r[iAtvd]||'').trim(),
-      resp:      [String(r[iResp1]||'').trim(), String(r[iResp2]||'').trim()].filter(Boolean).join(' / ') || '—',
-      prazo:     String(r[iPrazo]||'').trim(),
-      status:    String(r[iStat]||'').trim(),
-      evidencia: String(r[iEvid]||'').trim()
-    }))
-    .filter(a => a.atividade.length > 0);
+  if (dataRows.length > 0)
+    console.log('[PSI-Acordos] Primeiros status:', dataRows.slice(0,5).map(r => JSON.stringify(String(r[iStat]||''))));
+
+  return dataRows.map(r => ({
+    atividade: String(r[iAtvd]||'').trim(),
+    nivel:     String(r[iOrgao]||'').trim() || '—',
+    setor:     String(r[iSetor]||'').trim() || '—',
+    respUse:   String(r[iRespUse]||'').trim() || '—',
+    respUcp:   String(r[iRespUcp]||'').trim() || '—',
+    inicio:    String(r[iInicio]||'').trim() || '—',
+    prazo:     String(r[iPrazo]||'').trim() || '—',
+    status:    String(r[iStat]||'').trim(),
+    obs:       String(r[iObs]||'').trim() || '—',
+    indicador: String(r[iInd]||'').trim() || '—',
+    // compat: resp mantido para código que ainda use esse campo
+    resp:      [String(r[iRespUse]||'').trim(), String(r[iRespUcp]||'').trim()].filter(Boolean).join(' / ') || '—',
+    evidencia: String(r[iObs]||'').trim() || '—'
+  })).filter(a => a.atividade.length > 0);
 }
 
 function dadosAcordosAtivos() {
@@ -832,7 +849,10 @@ function renderAcordos(filtro, fonte) {
   console.log('[PSI-Acordos] Stats:', JSON.stringify(stats));
   console.log('[PSI-Acordos] Valores únicos de status:', JSON.stringify(_statusUniq));
 
-  const ORGAOS_FIXOS = ['Todos','SAF','SEPLAN','INTERPI','SEMAR','SADA'];
+  // Órgãos únicos da fonte ativa (dinâmico)
+  const orgaosUniq = ['Todos', ...new Set(
+    ACORDOS_DATA.map(a => String(a.nivel||'').trim()).filter(v => v && v !== '—')
+  ).values()];
 
   const matchOrgao = (nivel, filtro) => {
     if (filtro === 'Todos') return true;
@@ -843,14 +863,18 @@ function renderAcordos(filtro, fonte) {
 
   const rows = dados.map((a,i) => {
     const [cls,ic] = pillAcord(a.status);
+    const respStr = [a.respUse, a.respUcp].filter(v => v && v !== '—').join(' / ') || a.resp || '—';
     return `<tr>
       <td>${i+1}</td>
       <td><span class="pill pill-blue" style="font-size:9px">${a.nivel}</span></td>
+      <td style="font-size:10px;color:var(--muted)">${a.setor || '—'}</td>
       <td class="acord-activity">${a.atividade}</td>
-      <td>${a.resp || '—'}</td>
-      <td>${a.prazo || '—'}</td>
+      <td style="font-size:11px">${respStr}</td>
+      <td style="font-size:11px;white-space:nowrap">${a.inicio || '—'}</td>
+      <td style="font-size:11px;white-space:nowrap">${a.prazo || '—'}</td>
       <td><span class="pill ${cls}">${ic} ${a.status}</span></td>
-      <td style="font-size:11px;color:var(--muted);max-width:200px">${a.evidencia || '—'}</td>
+      <td style="font-size:11px;color:var(--muted);max-width:160px">${a.obs || a.evidencia || '—'}</td>
+      <td style="font-size:10px;color:var(--muted)">${a.indicador || '—'}</td>
     </tr>`;
   }).join('');
 
@@ -862,8 +886,8 @@ function renderAcordos(filtro, fonte) {
     return `<button class="filter-btn ${active}" onclick="renderAcordos('Todos','${k}')" ${disabled}>${v.label}${cnt > 0 ? ` <span style="font-size:9px;opacity:.7">(${cnt})</span>` : ' ⚠️'}</button>`;
   }).join('');
 
-  // Dropdown órgão
-  const opts = ORGAOS_FIXOS.map(o =>
+  // Dropdown órgão (dinâmico)
+  const opts = orgaosUniq.map(o =>
     `<option value="${o}" ${filtroAtivo===o?'selected':''}>${o}</option>`
   ).join('');
 
@@ -896,9 +920,16 @@ function renderAcordos(filtro, fonte) {
       <div style="overflow-x:auto">
         <table class="tbl">
           <thead><tr>
-            <th style="width:32px">#</th>
-            <th>Órgão</th><th>Atividade</th><th>Responsável</th>
-            <th>Prazo</th><th>Status</th><th>Evidências</th>
+            <th style="width:28px">#</th>
+            <th>Órgão</th>
+            <th>Setor</th>
+            <th>Atividade / Acordo</th>
+            <th>Responsável</th>
+            <th>Início</th>
+            <th>Prazo Final</th>
+            <th>Status</th>
+            <th>Observação</th>
+            <th>Indicador</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
