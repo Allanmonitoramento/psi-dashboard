@@ -740,15 +740,47 @@ function parseAcordosGeral(rows) {
 // r[7]=Prazo Final  r[8]=Status  r[9]=Observação
 function parseAcordosMissao(rows) {
   if (!rows || rows.length < 3) return [];
-  return rows.slice(2)
-    .filter(r => r[0] && String(r[0]).trim().length > 5)
+
+  // Auto-detectar colunas a partir do cabeçalho (linha 0 ou 1)
+  const normHdr = s => String(s||'').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[\s_-]+/g,' ').trim();
+
+  // Pega linha de cabeçalho (preferir a que tem mais colunas preenchidas)
+  const hdr0 = rows[0] || [];
+  const hdr1 = rows[1] || [];
+  const hdr = hdr0.filter(Boolean).length >= hdr1.filter(Boolean).length ? hdr0 : hdr1;
+
+  const colIdx = key => {
+    const idx = hdr.findIndex(c => normHdr(c).includes(key));
+    return idx >= 0 ? idx : null;
+  };
+
+  const iAtvd  = colIdx('atividade') ?? colIdx('acao') ?? colIdx('descricao') ?? 0;
+  const iNivel = colIdx('nivel') ?? colIdx('orgao') ?? colIdx('orgao') ?? 2;
+  const iResp1 = colIdx('responsavel') ?? colIdx('resp') ?? 4;
+  const iResp2 = colIdx('responsavel 2') ?? colIdx('resp2') ?? 5;
+  const iPrazo = colIdx('prazo') ?? colIdx('data') ?? 7;
+  const iStat  = colIdx('status') ?? colIdx('situacao') ?? colIdx('sit') ?? 8;
+  const iEvid  = colIdx('evidencia') ?? colIdx('evidencias') ?? colIdx('observacao') ?? 9;
+
+  console.log('[PSI-Acordos] Cabeçalho detectado:', hdr);
+  console.log('[PSI-Acordos] Colunas detectadas: atividade='+iAtvd+' nivel='+iNivel+' resp='+iResp1+'/'+iResp2+' prazo='+iPrazo+' status='+iStat+' evidencia='+iEvid);
+
+  // Verificar primeiras linhas de dados para debug
+  const dataRows = rows.slice(2).filter(r => r[0] && String(r[0]).trim().length > 5);
+  if (dataRows.length > 0) {
+    console.log('[PSI-Acordos] Primeiros status detectados:', dataRows.slice(0,5).map(r => JSON.stringify(String(r[iStat]||''))));
+  }
+
+  return dataRows
     .map(r => ({
-      nivel:     String(r[2]||'').trim() || '—',
-      atividade: String(r[0]||'').trim(),
-      resp:      [String(r[4]||'').trim(), String(r[5]||'').trim()].filter(Boolean).join(' / ') || '—',
-      prazo:     String(r[7]||'').trim(),
-      status:    String(r[8]||'').trim(),
-      evidencia: String(r[9]||'').trim()
+      nivel:     String(r[iNivel]||'').trim() || '—',
+      atividade: String(r[iAtvd]||'').trim(),
+      resp:      [String(r[iResp1]||'').trim(), String(r[iResp2]||'').trim()].filter(Boolean).join(' / ') || '—',
+      prazo:     String(r[iPrazo]||'').trim(),
+      status:    String(r[iStat]||'').trim(),
+      evidencia: String(r[iEvid]||'').trim()
     }))
     .filter(a => a.atividade.length > 0);
 }
@@ -788,11 +820,17 @@ function renderAcordos(filtro, fonte) {
   }
 
   const stats = {total:0,concluido:0,andamento:0,atraso:0,naoIniciado:0};
+  // debug: coletar valores únicos de status para diagnóstico
+  const _statusUniq = {};
   ACORDOS_DATA.forEach(a => {
     stats.total++;
     const cls = classifyStatus(a.status);
     stats[cls]++;
+    const sv = String(a.status||'').trim() || '(vazio)';
+    _statusUniq[sv] = (_statusUniq[sv]||0)+1;
   });
+  console.log('[PSI-Acordos] Stats:', JSON.stringify(stats));
+  console.log('[PSI-Acordos] Valores únicos de status:', JSON.stringify(_statusUniq));
 
   const ORGAOS_FIXOS = ['Todos','SAF','SEPLAN','INTERPI','SEMAR','SADA'];
 
@@ -876,9 +914,10 @@ function renderVisaoGeral(dados) {
   const todosAcordos = Object.values(ACORDOS_FONTES).flat();
   const acStats = {total:todosAcordos.length, conc:0, and:0, atr:0, ni:0};
   todosAcordos.forEach(a => {
-    if(a.status==='Concluído') acStats.conc++;
-    else if(a.status==='Em andamento') acStats.and++;
-    else if(a.status==='Em atraso') acStats.atr++;
+    const cls = classifyStatus(a.status);
+    if(cls==='concluido') acStats.conc++;
+    else if(cls==='andamento') acStats.and++;
+    else if(cls==='atraso') acStats.atr++;
     else acStats.ni++;
   });
 
@@ -1967,5 +2006,3 @@ carregarTudo();
 </script>
 </body>
 </html>
-
-
