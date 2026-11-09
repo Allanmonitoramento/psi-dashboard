@@ -1379,15 +1379,19 @@ function renderPAP(rows) {
   const pJov = totalJov / base;
   const pQui = totalQui / base;
 
-  // Agrupa por atividade produtiva (soma famílias)
+  // Agrupa por atividade produtiva (soma famílias + recortes de equidade)
   const ativMap = {};
   dataRows.forEach(r => {
     const a = String(r[iAtiv]||'').trim();
-    const v = toFloat(r[iFam] ?? 1);
-    if (a) ativMap[a] = (ativMap[a]||0) + v;
+    if (!a) return;
+    if (!ativMap[a]) ativMap[a] = {fam:0, mul:0, jov:0, qui:0};
+    ativMap[a].fam += toFloat(r[iFam]);
+    ativMap[a].mul += iMul >= 0 ? toFloat(r[iMul]) : 0;
+    ativMap[a].jov += iJov >= 0 ? toFloat(r[iJov]) : 0;
+    ativMap[a].qui += iQui >= 0 ? toFloat(r[iQui]) : 0;
   });
-  const topAtiv = Object.entries(ativMap).sort((a,b)=>b[1]-a[1]);
-  const totalAtiv = topAtiv.reduce((s,[,v])=>s+v,0);
+  const topAtiv = Object.entries(ativMap).sort((a,b)=>b[1].fam-a[1].fam);
+  const totalAtiv = topAtiv.reduce((s,[,v])=>s+v.fam,0);
 
   // Agrupa por município (soma famílias)
   const munMap = {};
@@ -1469,65 +1473,58 @@ function renderPAP(rows) {
       </div>
     </div>
 
-    <!-- Gráfico de atividades + Municípios -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <!-- Atividades produtivas + Municípios -->
+    <div style="display:grid;grid-template-columns:3fr 2fr;gap:14px">
 
-      <div class="card">
-        <div class="card-title">Atividades produtivas — distribuição de famílias</div>
-        <div class="chart-wrap" style="height:260px">
-          <canvas id="chart-pap-ativ"></canvas>
-        </div>
-        <!-- Legenda manual -->
-        <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">
-          ${topAtiv.map(([nome,],i) => `
-            <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)">
-              <span style="width:8px;height:8px;border-radius:2px;background:${coresGraf[i%coresGraf.length]};display:inline-block"></span>
-              ${nome}
-            </span>`).join('')}
+    <!-- Atividades produtivas — barras % + recortes de equidade -->
+    <div class="card">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+        <div class="card-title" style="margin:0">Atividades produtivas — distribuição de famílias</div>
+        <div style="display:flex;gap:12px;font-size:10px;font-weight:600">
+          <span style="color:#e0417a">👩 Mulheres</span>
+          <span style="color:#d49000">🌱 Jovens</span>
+          <span style="color:#7b3fa0">🌍 Quilombolas</span>
         </div>
       </div>
-
-      <div class="card">
-        <div class="card-title">Por município — famílias beneficiárias (top ${topMun.length})</div>
-        ${munBars || '<div style="color:var(--muted);font-size:12px">Coluna Município não identificada.</div>'}
-      </div>
-
+      ${topAtiv.map(([nome, v], i) => {
+        const pFam  = totalAtiv > 0 ? v.fam / totalAtiv : 0;
+        const base  = v.fam > 0 ? v.fam : 1;
+        const pMulA = v.mul / base;
+        const pJovA = v.jov / base;
+        const pQuiA = v.qui / base;
+        const cor   = coresGraf[i % coresGraf.length];
+        const hasMul = iMul >= 0 && v.mul > 0;
+        const hasJov = iJov >= 0 && v.jov > 0;
+        const hasQui = iQui >= 0 && v.qui > 0;
+        return `
+        <div style="margin-bottom:11px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+            <span style="font-size:12px;font-weight:500;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${nome}">${nome}</span>
+            <div style="display:flex;align-items:center;gap:10px;white-space:nowrap;flex-shrink:0">
+              <span style="font-size:12px;font-weight:700;color:${cor};min-width:38px;text-align:right">${(pFam*100).toFixed(1)}%</span>
+              <span style="font-size:10px;color:var(--muted)">${v.fam.toLocaleString('pt-BR')} fam.</span>
+              ${hasMul ? `<span style="font-size:10px;font-weight:600;color:#e0417a;min-width:30px">👩 ${(pMulA*100).toFixed(0)}%</span>` : ''}
+              ${hasJov ? `<span style="font-size:10px;font-weight:600;color:#d49000;min-width:30px">🌱 ${(pJovA*100).toFixed(0)}%</span>` : ''}
+              ${hasQui ? `<span style="font-size:10px;font-weight:600;color:#7b3fa0;min-width:30px">🌍 ${(pQuiA*100).toFixed(0)}%</span>` : ''}
+            </div>
+          </div>
+          <div class="prog-wrap" style="height:7px">
+            <div class="prog-fill" style="width:${(pFam*100).toFixed(1)}%;background:${cor}"></div>
+          </div>
+        </div>`; }).join('')}
     </div>
+
+    <!-- Por município -->
+    <div class="card">
+      <div class="card-title">Por município — famílias beneficiárias (top ${topMun.length})</div>
+      ${munBars || '<div style="color:var(--muted);font-size:12px">Coluna Município não identificada.</div>'}
+    </div>
+
+    </div><!-- /grid atividades+municípios -->
   </div>`;
 
-  // Renderiza gráfico de atividades (doughnut)
-  if (chartPAP) { chartPAP.destroy(); chartPAP = null; }
-  if (topAtiv.length > 0) {
-    chartPAP = new Chart(document.getElementById('chart-pap-ativ'), {
-      type: 'doughnut',
-      data: {
-        labels: topAtiv.map(([nome, qtd]) => `${nome} (${totalAtiv>0?pct(qtd/totalAtiv,0):''})`),
-        datasets: [{
-          data: topAtiv.map(([,v]) => v),
-          backgroundColor: topAtiv.map((_,i) => coresGraf[i % coresGraf.length]),
-          borderWidth: 2,
-          borderColor: '#fff'
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '55%',
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: ctx => {
-                const v = ctx.parsed;
-                const p = totalAtiv > 0 ? (v/totalAtiv*100).toFixed(1)+'%' : '';
-                return ` ${v.toLocaleString('pt-BR')} famílias (${p})`;
-              }
-            }
-          }
-        }
-      }
-    });
-  }
+  // Sem Chart.js necessário — layout em barras puras
+  if (chartPAP) { try { chartPAP.destroy(); } catch(e){} chartPAP = null; }
 }
 
 // ── ORÇAMENTO ÓRGÃO — BI financeiro por órgão ──
