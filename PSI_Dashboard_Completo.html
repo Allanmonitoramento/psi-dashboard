@@ -1749,6 +1749,7 @@ function renderCisternas(rows) {
     .filter(({nome}) => /\w+\/\d{2}/.test(nome));
 
   const iTotalCol = eHdr.findIndex(c => /total/i.test(String(c||'')));
+  const iMetaCol  = eHdr.findIndex(c => /^meta$/i.test(String(c||'').trim()));
 
   const iEStart    = iEHdr >= 0 ? iEHdr + 1 : 3;
   const iETotalRow = findRow('total geral', iEStart);
@@ -1762,7 +1763,8 @@ function renderCisternas(rows) {
     data:  String(r[1]||'').trim(),
     meses: mesesCols.map(({idx}) => parseN(r[idx])),
     total: iTotalCol >= 0 ? parseN(r[iTotalCol])
-                          : mesesCols.reduce((s,{idx}) => s + parseN(r[idx]), 0)
+                          : mesesCols.reduce((s,{idx}) => s + parseN(r[idx]), 0),
+    meta:  iMetaCol >= 0 ? parseN(r[iMetaCol]) : 0
   }));
 
   // ── Bloco Pagamentos ──
@@ -1820,13 +1822,37 @@ function renderCisternas(rows) {
 
   const cores = ['#1352a2','#0e7c4a','#d49000'];
 
-  // KPI cards por empresa
-  const empKPIs = empresasE.map((e,i) => `
-    <div class="kpi-card" style="border-left:3px solid ${cores[i%cores.length]}">
-      <div class="kpi-label" style="color:${cores[i%cores.length]}">${e.nome}</div>
-      <div class="kpi-value" style="color:${cores[i%cores.length]}">${e.total.toLocaleString('pt-BR')}</div>
-      <div class="kpi-sub">cisternas · contrato ${e.data}</div>
-    </div>`).join('');
+  // Totais com meta global
+  const metaGeral = iMetaCol >= 0
+    ? (iETotalRow >= 0 ? parseN((rows[iETotalRow]||[])[iMetaCol])
+                       : empresasE.reduce((s,e) => s + e.meta, 0))
+    : 0;
+
+  // KPI cards por empresa — com meta e % de execução
+  const empKPIs = empresasE.map((e,i) => {
+    const cor  = cores[i % cores.length];
+    const pExe = e.meta > 0 ? e.total / e.meta : null;
+    const pPct = pExe !== null ? Math.min(pExe * 100, 100) : null;
+    // Cor da barra: vermelho <50%, amarelo 50-80%, verde ≥80%
+    const barCor = pExe === null ? cor
+                 : pExe >= 0.80 ? '#0e7c4a'
+                 : pExe >= 0.50 ? '#d49000'
+                 : '#e03c3f';
+    return `
+    <div class="kpi-card" style="border-left:3px solid ${cor}">
+      <div class="kpi-label" style="color:${cor}">${e.nome}</div>
+      <div class="kpi-value" style="color:${cor}">${e.total.toLocaleString('pt-BR')}</div>
+      <div class="kpi-sub" style="margin-bottom:${e.meta>0?'6px':'0'}">cisternas · contrato ${e.data}</div>
+      ${e.meta > 0 ? `
+        <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px">
+          <span style="color:var(--muted)">Meta: <strong style="color:var(--text)">${e.meta.toLocaleString('pt-BR')}</strong></span>
+          <span style="font-weight:700;color:${barCor}">${(pExe*100).toFixed(1)}%</span>
+        </div>
+        <div class="prog-wrap" style="height:5px">
+          <div class="prog-fill" style="width:${pPct.toFixed(0)}%;background:${barCor}"></div>
+        </div>` : ''}
+    </div>`;
+  }).join('');
 
   // Tabela de pagamentos (mostra todos os meses, mesmo zerados)
   const pagTbRows = empresasP.map((e,i) => {
@@ -1852,7 +1878,19 @@ function renderCisternas(rows) {
       <div class="kpi-card kpi-blue">
         <div class="kpi-label">Total cisternas entregues</div>
         <div class="kpi-value">${totalGeralE.toLocaleString('pt-BR')}</div>
-        <div class="kpi-sub">Todas as empresas</div>
+        <div class="kpi-sub" style="margin-bottom:${metaGeral>0?'6px':'0'}">Todas as empresas</div>
+        ${metaGeral > 0 ? (() => {
+          const pG = totalGeralE / metaGeral;
+          const bG = pG >= 0.80 ? '#0e7c4a' : pG >= 0.50 ? '#d49000' : '#e03c3f';
+          return `
+          <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px">
+            <span style="color:rgba(255,255,255,.7)">Meta: <strong>${metaGeral.toLocaleString('pt-BR')}</strong></span>
+            <span style="font-weight:700;color:#fff">${(pG*100).toFixed(1)}%</span>
+          </div>
+          <div class="prog-wrap" style="height:5px;background:rgba(255,255,255,.3)">
+            <div class="prog-fill" style="width:${Math.min(pG*100,100).toFixed(0)}%;background:#fff"></div>
+          </div>`;
+        })() : ''}
       </div>
       ${empKPIs}
       <div class="kpi-card">
