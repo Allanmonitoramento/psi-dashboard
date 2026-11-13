@@ -148,19 +148,21 @@ function buildCard(sec) {
   });
 }
 
-fetch(APPS_SCRIPT_URL)
-  .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-  .then(data => {
-    document.getElementById('subtitulo').innerHTML =
-      `Projeto PSI BR-L1542 &nbsp;|&nbsp; Dados atualizados até <strong>${data.atualizadoEm}</strong>`;
-    data.secretarias.forEach(buildCard);
-  })
-  .catch(err => {
-    document.getElementById('main-grid').innerHTML =
-      `<div class="erro">Erro ao carregar dados.<br><small>${err.message}</small></div>`;
-  });
+// Carrega via JSONP para evitar bloqueio de CORS
+function carregarDados(data) {
+  document.getElementById('subtitulo').innerHTML =
+    `Projeto PSI BR-L1542 &nbsp;|&nbsp; Dados atualizados até <strong>${data.atualizadoEm}</strong>`;
+  data.secretarias.forEach(buildCard);
+}
+
+const script = document.createElement('script');
+script.src = APPS_SCRIPT_URL + "?callback=carregarDados";
+script.onerror = () => {
+  document.getElementById('main-grid').innerHTML =
+    `<div class="erro">Erro ao carregar dados.<br><small>Verifique o Apps Script.</small></div>`;
+};
+document.body.appendChild(script);
 
 </script>
 </body>
 </html>
-
