@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Execução Orçamentária por Secretaria — PSI BR-L1542</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #eef2f7;
+  color: #1a2b3c;
+  padding: 28px 20px 48px;
+}
+h1 { text-align: center; font-size: 1.25rem; font-weight: 700; color: #1a3a5c; margin-bottom: 4px; }
+.subtitle { text-align: center; font-size: 0.8rem; color: #6080a0; margin-bottom: 28px; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 22px;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+.card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+.card-header { padding: 11px 18px; font-weight: 700; font-size: 1rem; letter-spacing: 0.08em; color: #fff; text-align: center; }
+.section-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8899aa; padding: 10px 16px 4px; border-top: 1px solid #eef2f7; }
+.section-label:first-of-type { border-top: none; padding-top: 14px; }
+.chart-wrap { padding: 4px 16px 8px; }
+.deficit-box { margin: 4px 14px 10px; padding: 10px 14px; border-radius: 8px; background: #fff4f2; border-left: 4px solid #cc3300; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+.deficit-box .lbl { font-size: 0.75rem; font-weight: 700; color: #cc3300; text-transform: uppercase; letter-spacing: 0.05em; }
+.deficit-box .val { font-size: 0.95rem; font-weight: 700; color: #991100; }
+.deficit-box .pct-wrap { font-size: 0.72rem; color: #bb5500; }
+.plan27-box { margin: 4px 14px 14px; padding: 10px 14px; border-radius: 8px; background: #f5f8ff; border-left: 4px solid #6688bb; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+.plan27-box .lbl { font-size: 0.75rem; font-weight: 700; color: #336699; text-transform: uppercase; letter-spacing: 0.05em; }
+.plan27-box .val { font-size: 0.95rem; font-weight: 700; color: #1a3a5c; }
+.plan27-box .note27 { font-size: 0.7rem; color: #7799bb; }
+.legend { display: flex; justify-content: center; gap: 20px; margin: 0 auto 22px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #445566; }
+.legend-dot { width: 14px; height: 14px; border-radius: 3px; }
+.dot-plan { background: #4a90c8; }
+.dot-exec { background: #4caf50; }
+.erro { text-align: center; color: #cc3300; font-weight: 700; padding: 40px; font-size: 1rem; }
+</style>
+</head>
+<body>
+
+<h1>Execução Orçamentária por Secretaria</h1>
+<p class="subtitle" id="subtitulo">Projeto PSI BR-L1542 &nbsp;|&nbsp; Carregando dados…</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot dot-plan"></div> Planejado</div>
+  <div class="legend-item"><div class="legend-dot dot-exec"></div> Executado</div>
+</div>
+
+<div class="grid" id="main-grid"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script>
+
+// ============================================================
+//  Cole aqui a URL do seu Apps Script após implantar
+// ============================================================
+const APPS_SCRIPT_URL = "COLE_AQUI_A_URL_DO_APPS_SCRIPT";
+// ============================================================
+
+function brl(v) {
+  return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL', minimumFractionDigits:2 });
+}
+
+function buildCard(sec) {
+  const anos2426 = sec.anos.filter(r => r.ano <= 2026);
+  const ano2027  = sec.anos.find(r => r.ano === 2027);
+
+  const totalPlan = anos2426.reduce((s,r) => s + r.planejado, 0);
+  const totalExec = anos2426.reduce((s,r) => s + r.executado, 0);
+  const deficit   = totalPlan - totalExec;
+  const defPct    = (deficit / totalPlan * 100).toFixed(1);
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <div class="card-header" style="background:${sec.cor}">${sec.label}</div>
+    <div class="section-label">Planejado vs. Executado — 2024 a 2026</div>
+    <div class="chart-wrap"><canvas id="chart-${sec.id}" height="140"></canvas></div>
+    <div class="section-label">Déficit acumulado (2024–2026)</div>
+    <div class="deficit-box">
+      <div>
+        <div class="lbl">Não executado</div>
+        <div class="pct-wrap">${defPct}% do valor planejado</div>
+      </div>
+      <div class="val">${brl(deficit)}</div>
+    </div>
+    <div class="section-label">Previsto para 2027 (exercício futuro)</div>
+    <div class="plan27-box">
+      <div>
+        <div class="lbl">Planejado 2027</div>
+        <div class="note27">Execução ainda não iniciada</div>
+      </div>
+      <div class="val">${brl(ano2027.planejado)}</div>
+    </div>
+  `;
+  document.getElementById('main-grid').appendChild(card);
+
+  new Chart(document.getElementById(`chart-${sec.id}`), {
+    plugins: [ChartDataLabels],
+    type: 'bar',
+    data: {
+      labels: anos2426.map(r => String(r.ano)),
+      datasets: [
+        { label:'Planejado', data: anos2426.map(r => r.planejado), backgroundColor:'rgba(74,144,200,0.80)', borderColor:'#2a70b0', borderWidth:1.5, borderRadius:4 },
+        { label:'Executado', data: anos2426.map(r => r.executado), backgroundColor:'rgba(76,175,80,0.80)',  borderColor:'#2e7d32', borderWidth:1.5, borderRadius:4 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        datalabels: {
+          anchor:'end', align:'end', offset:2,
+          font:{ size:9, weight:'700' }, color:'#223344',
+          formatter: v => {
+            if (v >= 1e6) return (v/1e6).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'Mi';
+            if (v >= 1e3) return (v/1e3).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})+'K';
+            return v;
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${brl(ctx.raw)}`,
+            afterLabel: ctx => {
+              if (ctx.datasetIndex === 1) {
+                const plan = anos2426[ctx.dataIndex].planejado;
+                return ` → ${(ctx.raw / plan * 100).toFixed(1)}% do planejado`;
+              }
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid:{ display:false }, ticks:{ font:{ size:11 } } },
+        y: {
+          ticks: { font:{ size:10 }, callback: v => v >= 1e6 ? (v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:0})+'Mi' : (v/1e3).toFixed(0)+'K' },
+          grid: { color:'#eef2f7' }
+        }
+      }
+    }
+  });
+}
+
+fetch(APPS_SCRIPT_URL)
+  .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+  .then(data => {
+    document.getElementById('subtitulo').innerHTML =
+      `Projeto PSI BR-L1542 &nbsp;|&nbsp; Dados atualizados até <strong>${data.atualizadoEm}</strong>`;
+    data.secretarias.forEach(buildCard);
+  })
+  .catch(err => {
+    document.getElementById('main-grid').innerHTML =
+      `<div class="erro">Erro ao carregar dados.<br><small>${err.message}</small></div>`;
+  });
+
+</script>
+</body>
+</html>
