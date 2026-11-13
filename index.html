@@ -59,6 +59,22 @@ h1 { text-align: center; font-size: 1.25rem; font-weight: 700; color: #1a3a5c; m
 .pct-high { background: #2e7d32; }
 .exec-bar-wrap { margin-top: 8px; background: #d4e8d4; border-radius: 4px; height: 8px; overflow: hidden; }
 .exec-bar-fill { height: 100%; border-radius: 4px; background: #2e7d32; transition: width 0.6s; }
+.orc-box {
+  margin: 4px 14px 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #f5f0ff;
+  border-left: 4px solid #6a1b9a;
+}
+.orc-box .orc-title { font-size: 0.75rem; font-weight: 700; color: #6a1b9a; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+.orc-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.orc-item { text-align: center; }
+.orc-item small { display: block; font-size: 0.62rem; color: #886699; text-transform: uppercase; letter-spacing: 0.04em; }
+.orc-item span { font-size: 0.82rem; font-weight: 700; color: #1a0a2a; }
+.orc-item.saldo span { color: #2e7d32; }
+.orc-item.saldo.negativo span { color: #cc3300; }
+.orc-bar-wrap { margin-top: 8px; background: #e0d0f0; border-radius: 4px; height: 8px; overflow: hidden; }
+.orc-bar-fill { height: 100%; border-radius: 4px; background: #6a1b9a; }
 .legend { display: flex; justify-content: center; gap: 20px; margin: 0 auto 22px; flex-wrap: wrap; }
 .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #445566; }
 .legend-dot { width: 14px; height: 14px; border-radius: 3px; }
@@ -101,14 +117,34 @@ function buildCard(sec) {
   const totalExec = anos2426.reduce((s,r) => s + r.executado, 0);
   const deficit   = totalPlan - totalExec;
   const defPct    = (deficit / totalPlan * 100).toFixed(1);
-  const execPct   = totalPlan > 0 ? (totalExec / totalPlan * 100) : 0;
+  const execPct    = totalPlan > 0 ? (totalExec / totalPlan * 100) : 0;
   const execPctFmt = execPct.toFixed(1);
-  const pctClass  = execPct >= 70 ? 'pct-high' : execPct >= 40 ? 'pct-mid' : 'pct-low';
+  const pctClass   = execPct >= 70 ? 'pct-high' : execPct >= 40 ? 'pct-mid' : 'pct-low';
+
+  // Orçamento total do projeto (até 2029)
+  const orcamento  = sec.orcamento || 0;
+  const totalExecGeral = sec.anos.reduce((s,r) => s + r.executado, 0);
+  const saldo      = orcamento - totalExecGeral;
+  const orcPct     = orcamento > 0 ? Math.min(totalExecGeral / orcamento * 100, 100) : 0;
+  const saldoClass = saldo >= 0 ? 'saldo' : 'saldo negativo';
 
   const card = document.createElement('div');
   card.className = 'card';
   card.innerHTML = `
     <div class="card-header" style="background:${sec.cor}">${sec.label}</div>
+    <div class="section-label">Orçamento total do projeto (até 2029)</div>
+    ${orcamento > 0 ? `
+    <div class="orc-box">
+      <div class="orc-title">Situação orçamentária</div>
+      <div class="orc-grid">
+        <div class="orc-item"><small>Orçamento</small><span>${brl(orcamento)}</span></div>
+        <div class="orc-item"><small>Executado</small><span>${brl(totalExecGeral)}</span></div>
+        <div class="orc-item ${saldoClass}"><small>Saldo</small><span>${brl(saldo)}</span></div>
+      </div>
+      <div class="orc-bar-wrap"><div class="orc-bar-fill" style="width:${orcPct.toFixed(1)}%"></div></div>
+      <div style="text-align:right;font-size:0.68rem;color:#886699;margin-top:3px">${orcPct.toFixed(1)}% do orçamento executado</div>
+    </div>` : ''}
+
     <div class="section-label">Planejado vs. Executado — 2024 a 2026</div>
     <div class="chart-wrap"><canvas id="chart-${sec.id}" height="140"></canvas></div>
     <div class="section-label">Execução acumulada (2024–2026)</div>
