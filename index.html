@@ -12,19 +12,8 @@ body {
   color: #1a2b3c;
   padding: 28px 20px 48px;
 }
-h1 {
-  text-align: center;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #1a3a5c;
-  margin-bottom: 4px;
-}
-.subtitle {
-  text-align: center;
-  font-size: 0.8rem;
-  color: #6080a0;
-  margin-bottom: 28px;
-}
+h1 { text-align:center; font-size:1.25rem; font-weight:700; color:#1a3a5c; margin-bottom:4px; }
+.subtitle { text-align:center; font-size:0.8rem; color:#6080a0; margin-bottom:28px; }
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
@@ -32,164 +21,97 @@ h1 {
   max-width: 1120px;
   margin: 0 auto;
 }
-.card {
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-}
-.card-header {
-  padding: 11px 18px;
-  font-weight: 700;
-  font-size: 1rem;
-  letter-spacing: 0.08em;
-  color: #fff;
-  text-align: center;
-}
-.interpi .card-header { background: #1a5f9e; }
-.saf     .card-header { background: #2e7d32; }
-.semarh  .card-header { background: #6a1b9a; }
-.seplan  .card-header { background: #b45309; }
-
+.card { background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.08); }
+.card-header { padding:11px 18px; font-weight:700; font-size:1rem; letter-spacing:0.08em; color:#fff; text-align:center; }
+.interpi .card-header { background:#1a5f9e; }
+.saf     .card-header { background:#2e7d32; }
+.semarh  .card-header { background:#6a1b9a; }
+.seplan  .card-header { background:#b45309; }
 .section-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #8899aa;
-  padding: 10px 16px 4px;
-  border-top: 1px solid #eef2f7;
+  font-size:0.72rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase;
+  color:#8899aa; padding:10px 16px 4px; border-top:1px solid #eef2f7;
 }
-.section-label:first-of-type { border-top: none; padding-top: 14px; }
-
-.chart-wrap { padding: 4px 16px 8px; }
-
+.section-label:first-of-type { border-top:none; padding-top:14px; }
+.chart-wrap { padding:4px 16px 8px; }
 .deficit-box {
-  margin: 4px 14px 10px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: #fff4f2;
-  border-left: 4px solid #cc3300;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
+  margin:4px 14px 10px; padding:10px 14px; border-radius:8px;
+  background:#fff4f2; border-left:4px solid #cc3300;
+  display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;
 }
-.deficit-box .lbl  { font-size: 0.75rem; font-weight: 700; color: #cc3300; text-transform: uppercase; letter-spacing: 0.05em; }
-.deficit-box .val  { font-size: 0.95rem; font-weight: 700; color: #991100; }
-.deficit-box .pct-wrap { font-size: 0.72rem; color: #bb5500; }
-
-/* futuros: três colunas */
-.future-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin: 4px 14px 14px;
+.deficit-box .lbl  { font-size:0.75rem; font-weight:700; color:#cc3300; text-transform:uppercase; letter-spacing:0.05em; }
+.deficit-box .val  { font-size:0.95rem; font-weight:700; color:#991100; }
+.deficit-box .pct-wrap { font-size:0.72rem; color:#bb5500; }
+.future-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:4px 14px 14px; }
+.plan-fut { padding:9px 10px; border-radius:8px; background:#f5f8ff; border-left:4px solid #6688bb; }
+.plan-fut .lbl  { font-size:0.7rem; font-weight:700; color:#336699; text-transform:uppercase; letter-spacing:0.04em; }
+.plan-fut .val  { font-size:0.82rem; font-weight:700; color:#1a3a5c; margin-top:3px; }
+.plan-fut .note { font-size:0.65rem; color:#7799bb; }
+.legend { display:flex; justify-content:center; gap:20px; margin:0 auto 22px; flex-wrap:wrap; }
+.legend-item { display:flex; align-items:center; gap:6px; font-size:0.8rem; color:#445566; }
+.legend-dot { width:14px; height:14px; border-radius:3px; }
+.dot-plan { background:#4a90c8; }
+.dot-exec { background:#4caf50; }
+/* loading */
+#loading {
+  text-align:center; padding:60px 20px; font-size:0.95rem; color:#6080a0;
 }
-.plan-fut {
-  padding: 9px 10px;
-  border-radius: 8px;
-  background: #f5f8ff;
-  border-left: 4px solid #6688bb;
-  text-align: left;
+#loading .spinner {
+  width:36px; height:36px; border:4px solid #d0dce8; border-top-color:#1a5f9e;
+  border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 16px;
 }
-.plan-fut .lbl  { font-size: 0.7rem; font-weight: 700; color: #336699; text-transform: uppercase; letter-spacing: 0.04em; }
-.plan-fut .val  { font-size: 0.82rem; font-weight: 700; color: #1a3a5c; margin-top: 3px; }
-.plan-fut .note { font-size: 0.65rem; color: #7799bb; }
-
-.legend {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin: 0 auto 22px;
-  flex-wrap: wrap;
-}
-.legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #445566; }
-.legend-dot  { width: 14px; height: 14px; border-radius: 3px; }
-.dot-plan { background: #4a90c8; }
-.dot-exec { background: #4caf50; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#error-msg { text-align:center; color:#cc3300; padding:40px 20px; font-size:0.9rem; }
 </style>
 </head>
 <body>
 
 <h1>Execução Orçamentária por Secretaria</h1>
-<p class="subtitle">Projeto PSI BR-L1542 &nbsp;|&nbsp; Dados atualizados até <strong>30/10/2026</strong></p>
+<p class="subtitle" id="subtitle">Projeto PSI BR-L1542 &nbsp;|&nbsp; Carregando dados…</p>
 
-<div class="legend">
-  <div class="legend-item"><div class="legend-dot dot-plan"></div> Planejado</div>
-  <div class="legend-item"><div class="legend-dot dot-exec"></div> Executado</div>
+<div id="loading">
+  <div class="spinner"></div>
+  Buscando dados da planilha…
 </div>
+<div id="error-msg" style="display:none;"></div>
 
-<!-- BASELINE -->
-<div style="max-width:1120px;margin:0 auto 28px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
-  <div style="padding:11px 20px;background:#1a3a5c;color:#fff;font-weight:700;font-size:0.95rem;letter-spacing:0.05em;">Baseline — Planejado Original vs. Planejado Atual (total do projeto)</div>
-  <div style="overflow-x:auto;">
-    <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
-      <thead>
-        <tr style="background:#f7f9fc;">
-          <th style="padding:9px 16px;text-align:left;font-weight:700;color:#445566;border-bottom:2px solid #e0e8f0;">Secretaria</th>
-          <th style="padding:9px 16px;text-align:right;font-weight:700;color:#445566;border-bottom:2px solid #e0e8f0;">Planejado Original</th>
-          <th style="padding:9px 16px;text-align:right;font-weight:700;color:#445566;border-bottom:2px solid #e0e8f0;">Planejado Atual</th>
-          <th style="padding:9px 16px;text-align:right;font-weight:700;color:#445566;border-bottom:2px solid #e0e8f0;">Diferença</th>
-          <th style="padding:9px 16px;text-align:left;font-weight:700;color:#445566;border-bottom:2px solid #e0e8f0;">Situação</th>
-        </tr>
-      </thead>
-      <tbody id="baseline-tbody"></tbody>
-    </table>
+<div id="content" style="display:none;">
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot dot-plan"></div> Planejado</div>
+    <div class="legend-item"><div class="legend-dot dot-exec"></div> Executado</div>
   </div>
-</div>
 
-<div class="grid" id="main-grid"></div>
+  <!-- BASELINE -->
+  <div style="max-width:1120px;margin:0 auto 28px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+    <div style="padding:11px 20px;background:#1a3a5c;color:#fff;font-weight:700;font-size:0.95rem;letter-spacing:0.05em;">Baseline — Planejado Original vs. Planejado Atual (total do projeto)</div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+        <thead>
+          <tr style="background:#f7f9fc;">
+            <th style="padding:9px 16px;text-align:left;font-weight:700;color:#445566;border-bottom:2px solid #e0e8f0;">Secretaria</th>
+            <th style="padding:9px 16px;text-align:right;font-weight:700;color:#445566;border-bottom:2px solid #e0e8f0;">Planejado Original</th>
+            <th style="padding:9px 16px;text-align:right;font-weight:700;color:#445566;border-bottom:2px solid #e0e8f0;">Planejado Atual</th>
+            <th style="padding:9px 16px;text-align:right;font-weight:700;color:#445566;border-bottom:2px solid #e0e8f0;">Diferença</th>
+            <th style="padding:9px 16px;text-align:left;font-weight:700;color:#445566;border-bottom:2px solid #e0e8f0;">Situação</th>
+          </tr>
+        </thead>
+        <tbody id="baseline-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid" id="main-grid"></div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script>
-const DATA = {
-  interpi: {
-    label: 'INTERPI', cls: 'interpi',
-    rows: [
-      { ano:2024, plan:5084808.00,    exec:205919.01   },
-      { ano:2025, plan:40195100.00,   exec:5881012.19  },
-      { ano:2026, plan:7189735.00,    exec:5296240.19  },
-      { ano:2027, plan:5010696.40,    exec:null },
-      { ano:2028, plan:7500000.00,    exec:null },
-      { ano:2029, plan:8501304.61,    exec:null },
-    ]
-  },
-  saf: {
-    label: 'SAF', cls: 'saf',
-    rows: [
-      { ano:2024, plan:96482533.00,   exec:3616601.39  },
-      { ano:2025, plan:133935110.82,  exec:9105419.20  },
-      { ano:2026, plan:68793400.00,   exec:25553282.64 },
-      { ano:2027, plan:129457533.90,  exec:null },
-      { ano:2028, plan:263347498.07,  exec:null },
-      { ano:2029, plan:250000000.00,  exec:null },
-    ]
-  },
-  semarh: {
-    label: 'SEMARH', cls: 'semarh',
-    rows: [
-      { ano:2024, plan:4162844.00,    exec:512977.99   },
-      { ano:2025, plan:55117012.50,   exec:4736355.30  },
-      { ano:2026, plan:9499080.00,    exec:3338386.36  },
-      { ano:2027, plan:7117991.84,    exec:null },
-      { ano:2028, plan:18409173.51,   exec:null },
-      { ano:2029, plan:20000000.00,   exec:null },
-    ]
-  },
-  seplan: {
-    label: 'SEPLAN', cls: 'seplan',
-    rows: [
-      { ano:2024, plan:4015934.00,    exec:885961.20   },
-      { ano:2025, plan:25566777.50,   exec:5351905.22  },
-      { ano:2026, plan:11337198.00,   exec:9356103.68  },
-      { ano:2027, plan:12265430.00,   exec:null },
-      { ano:2028, plan:5500000.00,    exec:null },
-      { ano:2029, plan:5500000.00,    exec:null },
-    ]
-  },
+const API_URL = 'https://script.google.com/macros/s/AKfycbwPCq8sqcIQTdR27jg9vuLGEsD0-ZPZSKbQwhNcAH5HMww7ylNFhlqJmGkO1O9zP5jw/exec';
+
+const META = {
+  interpi: { label:'INTERPI', cls:'interpi', accent:'#1a5f9e' },
+  saf:     { label:'SAF',     cls:'saf',     accent:'#2e7d32' },
+  semarh:  { label:'SEMARH',  cls:'semarh',  accent:'#6a1b9a' },
+  seplan:  { label:'SEPLAN',  cls:'seplan',  accent:'#b45309' },
 };
 
 function brl(v) {
@@ -201,18 +123,18 @@ function abbr(v) {
   return v;
 }
 
-function buildCard(key) {
-  const sec      = DATA[key];
-  const rows2426 = sec.rows.filter(r => r.ano <= 2026);
-  const futRows  = sec.rows.filter(r => r.ano >= 2027);
+function buildCard(key, rows) {
+  const meta     = META[key];
+  const rows2426 = rows.filter(r => r.ano <= 2026);
+  const futRows  = rows.filter(r => r.ano >= 2027);
 
   const totalPlan = rows2426.reduce((s,r) => s + r.plan, 0);
-  const totalExec = rows2426.reduce((s,r) => s + r.exec, 0);
+  const totalExec = rows2426.reduce((s,r) => s + (r.exec || 0), 0);
   const deficit   = totalPlan - totalExec;
   const defPct    = (deficit / totalPlan * 100).toFixed(1);
 
   const card = document.createElement('div');
-  card.className = `card ${sec.cls}`;
+  card.className = `card ${meta.cls}`;
 
   const futHTML = futRows.map(r => `
     <div class="plan-fut">
@@ -222,11 +144,9 @@ function buildCard(key) {
     </div>`).join('');
 
   card.innerHTML = `
-    <div class="card-header">${sec.label}</div>
+    <div class="card-header">${meta.label}</div>
     <div class="section-label">Planejado vs. Executado — 2024 a 2026</div>
-    <div class="chart-wrap">
-      <canvas id="chart-${key}" height="150"></canvas>
-    </div>
+    <div class="chart-wrap"><canvas id="chart-${key}" height="150"></canvas></div>
     <div class="section-label">Déficit acumulado (2024–2026)</div>
     <div class="deficit-box">
       <div>
@@ -236,8 +156,7 @@ function buildCard(key) {
       <div class="val">${brl(deficit)}</div>
     </div>
     <div class="section-label">Previsto — exercícios futuros</div>
-    <div class="future-row">${futHTML}</div>
-  `;
+    <div class="future-row">${futHTML}</div>`;
 
   document.getElementById('main-grid').appendChild(card);
 
@@ -251,30 +170,23 @@ function buildCard(key) {
           label: 'Planejado',
           data: rows2426.map(r => r.plan),
           backgroundColor: 'rgba(74,144,200,0.80)',
-          borderColor: '#2a70b0',
-          borderWidth: 1.5,
-          borderRadius: 4,
+          borderColor: '#2a70b0', borderWidth:1.5, borderRadius:4,
         },
         {
           label: 'Executado',
-          data: rows2426.map(r => r.exec),
+          data: rows2426.map(r => r.exec || 0),
           backgroundColor: 'rgba(76,175,80,0.80)',
-          borderColor: '#2e7d32',
-          borderWidth: 1.5,
-          borderRadius: 4,
+          borderColor: '#2e7d32', borderWidth:1.5, borderRadius:4,
         },
       ]
     },
     options: {
       responsive: true,
       plugins: {
-        legend: { display: false },
+        legend: { display:false },
         datalabels: {
-          anchor: 'end',
-          align: 'end',
-          offset: 2,
-          font: { size: 9, weight: '700' },
-          color: '#223344',
+          anchor:'end', align:'end', offset:2,
+          font:{ size:9, weight:'700' }, color:'#223344',
           formatter: v => abbr(v)
         },
         tooltip: {
@@ -283,20 +195,16 @@ function buildCard(key) {
             afterLabel: ctx => {
               if (ctx.datasetIndex === 1) {
                 const plan = rows2426[ctx.dataIndex].plan;
-                const pct  = (ctx.raw / plan * 100).toFixed(1);
-                return ` → ${pct}% do planejado`;
+                return ` → ${(ctx.raw / plan * 100).toFixed(1)}% do planejado`;
               }
             }
           }
         }
       },
       scales: {
-        x: { grid: { display:false }, ticks: { font:{ size:11 } } },
+        x: { grid:{ display:false }, ticks:{ font:{ size:11 } } },
         y: {
-          ticks: {
-            font: { size:10 },
-            callback: v => v >= 1e6 ? (v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:0})+'Mi' : (v/1e3).toFixed(0)+'K'
-          },
+          ticks: { font:{ size:10 }, callback: v => v>=1e6 ? (v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:0})+'Mi' : (v/1e3).toFixed(0)+'K' },
           grid: { color:'#eef2f7' }
         }
       }
@@ -304,41 +212,61 @@ function buildCard(key) {
   });
 }
 
-Object.keys(DATA).forEach(buildCard);
-
-// BASELINE TABLE
-(function buildBaseline() {
-  const baseline = [
-    { label:'INTERPI', cls:'interpi', accent:'#1a5f9e', original:32395172.40, atual:32395172.40 },
-    { label:'SAF',     cls:'saf',     accent:'#2e7d32', original:681080335.20, atual:681080335.20 },
-    { label:'SEMARH', cls:'semarh',  accent:'#6a1b9a', original:54114885.00, atual:54114885.00 },
-    { label:'SEPLAN', cls:'seplan',  accent:'#b45309', original:28909553.40, atual:38859400.10 },
-  ];
+function buildBaseline(baseline) {
   const tbody = document.getElementById('baseline-tbody');
-  baseline.forEach(r => {
-    const diff    = r.atual - r.original;
-    const diffPct = (diff / r.original * 100).toFixed(1);
-    const isZero  = Math.abs(diff) < 0.01;
-    const isOver  = diff > 0;
-    const diffColor = isZero ? '#6699aa' : (isOver ? '#cc3300' : '#2e7d32');
+  tbody.innerHTML = '';
+  Object.entries(baseline).forEach(([key, b]) => {
+    const meta = META[key];
+    const diff = b.atual - b.original;
+    const isZero = Math.abs(diff) < 0.01;
+    const diffColor = isZero ? '#6699aa' : (diff > 0 ? '#cc3300' : '#2e7d32');
+    const pct = Math.abs(diff / b.original * 100).toFixed(1);
     const badge = isZero
       ? `<span style="background:#eef4ee;color:#2e7d32;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:12px;">Sem alteração</span>`
-      : `<span style="background:#fff0ee;color:#cc3300;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:12px;">Revisão +${Math.abs(diffPct)}%</span>`;
+      : `<span style="background:#fff0ee;color:#cc3300;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:12px;">Revisão +${pct}%</span>`;
     const tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid #eef2f7';
     tr.innerHTML = `
       <td style="padding:10px 16px;">
-        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${r.accent};margin-right:7px;"></span>
-        <strong>${r.label}</strong>
+        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${meta.accent};margin-right:7px;"></span>
+        <strong>${meta.label}</strong>
       </td>
-      <td style="padding:10px 16px;text-align:right;color:#334455;">${brl(r.original)}</td>
-      <td style="padding:10px 16px;text-align:right;color:#334455;font-weight:${isZero?'400':'700'}">${brl(r.atual)}</td>
-      <td style="padding:10px 16px;text-align:right;font-weight:700;color:${diffColor};">${isZero ? '—' : (isOver?'+':'')+brl(diff)}</td>
+      <td style="padding:10px 16px;text-align:right;color:#334455;">${brl(b.original)}</td>
+      <td style="padding:10px 16px;text-align:right;color:#334455;font-weight:${isZero?'400':'700'}">${brl(b.atual)}</td>
+      <td style="padding:10px 16px;text-align:right;font-weight:700;color:${diffColor};">${isZero ? '—' : (diff>0?'+':'')+brl(diff)}</td>
       <td style="padding:10px 16px;">${badge}</td>`;
     tbody.appendChild(tr);
   });
-})();
+}
+
+// ── FETCH ──────────────────────────────────────────────────────────────────
+fetch(API_URL)
+  .then(r => r.json())
+  .then(data => {
+    // Atualiza subtítulo com data da planilha
+    const dt = data.atualizado
+      ? `Dados atualizados até <strong>${new Date(data.atualizado).toLocaleDateString('pt-BR')}</strong>`
+      : 'Projeto PSI BR-L1542';
+    document.getElementById('subtitle').innerHTML = `Projeto PSI BR-L1542 &nbsp;|&nbsp; ${dt}`;
+
+    // Oculta loading, mostra conteúdo
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+
+    // Monta baseline e cards
+    if (data.baseline) buildBaseline(data.baseline);
+    ['interpi','saf','semarh','seplan'].forEach(k => {
+      if (data[k]) buildCard(k, data[k]);
+    });
+  })
+  .catch(err => {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error-msg').style.display = 'block';
+    document.getElementById('error-msg').innerHTML =
+      `⚠️ Não foi possível carregar os dados da planilha.<br>
+       <small style="color:#888;">${err.message}</small><br><br>
+       <small>Verifique se o Apps Script está publicado como <strong>App da Web</strong> com acesso <strong>Qualquer pessoa</strong>.</small>`;
+  });
 </script>
 </body>
 </html>
-
