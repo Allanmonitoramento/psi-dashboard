@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Execução Orçamentária por Secretaria — PSI BR-L1542</title>
+<title>Execução Orçamentária — PSI BR-L1542</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -51,7 +51,6 @@ h1 { text-align:center; font-size:1.25rem; font-weight:700; color:#1a3a5c; margi
 .legend-dot { width:14px; height:14px; border-radius:3px; }
 .dot-plan { background:#4a90c8; }
 .dot-exec { background:#4caf50; }
-/* loading */
 #loading {
   text-align:center; padding:60px 20px; font-size:0.95rem; color:#6080a0;
 }
@@ -105,7 +104,11 @@ h1 { text-align:center; font-size:1.25rem; font-weight:700; color:#1a3a5c; margi
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script>
+// ============================================================
+// ALTERE APENAS ESTA URL ao republicar o Apps Script
+// ============================================================
 const API_URL = 'https://script.google.com/macros/s/AKfycbwPCq8sqcIQTdR27jg9vuLGEsD0-ZPZSKbQwhNcAH5HMww7ylNFhlqJmGkO1O9zP5jw/exec';
+// ============================================================
 
 const META = {
   interpi: { label:'INTERPI', cls:'interpi', accent:'#1a5f9e' },
@@ -204,7 +207,10 @@ function buildCard(key, rows) {
       scales: {
         x: { grid:{ display:false }, ticks:{ font:{ size:11 } } },
         y: {
-          ticks: { font:{ size:10 }, callback: v => v>=1e6 ? (v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:0})+'Mi' : (v/1e3).toFixed(0)+'K' },
+          ticks: {
+            font:{ size:10 },
+            callback: v => v>=1e6 ? (v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:0})+'Mi' : (v/1e3).toFixed(0)+'K'
+          },
           grid: { color:'#eef2f7' }
         }
       }
@@ -239,21 +245,17 @@ function buildBaseline(baseline) {
   });
 }
 
-// ── FETCH ──────────────────────────────────────────────────────────────────
 fetch(API_URL)
   .then(r => r.json())
   .then(data => {
-    // Atualiza subtítulo com data da planilha
     const dt = data.atualizado
       ? `Dados atualizados até <strong>${new Date(data.atualizado).toLocaleDateString('pt-BR')}</strong>`
       : 'Projeto PSI BR-L1542';
     document.getElementById('subtitle').innerHTML = `Projeto PSI BR-L1542 &nbsp;|&nbsp; ${dt}`;
 
-    // Oculta loading, mostra conteúdo
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = 'block';
 
-    // Monta baseline e cards
     if (data.baseline) buildBaseline(data.baseline);
     ['interpi','saf','semarh','seplan'].forEach(k => {
       if (data[k]) buildCard(k, data[k]);
@@ -270,3 +272,4 @@ fetch(API_URL)
 </script>
 </body>
 </html>
+
