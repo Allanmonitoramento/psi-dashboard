@@ -41,6 +41,14 @@ h1 { text-align:center; font-size:1.25rem; font-weight:700; color:#1a3a5c; margi
 .deficit-box .lbl  { font-size:0.75rem; font-weight:700; color:#cc3300; text-transform:uppercase; letter-spacing:0.05em; }
 .deficit-box .val  { font-size:0.95rem; font-weight:700; color:#991100; }
 .deficit-box .pct-wrap { font-size:0.72rem; color:#bb5500; }
+.def-line { margin:0 16px 8px; font-size:0.74rem; color:#7a8899; }
+.def-line b { color:#556677; }
+.saldo-box { margin:4px 14px 10px; padding:10px 14px; border-radius:8px; background:#eef4fb; border-left:4px solid #1a5f9e;
+  display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; }
+.saldo-box .lbl { font-size:0.75rem; font-weight:700; color:#1a5f9e; text-transform:uppercase; letter-spacing:0.05em; }
+.saldo-box .sub { font-size:0.68rem; color:#6b819a; margin-top:2px; }
+.saldo-box .val { font-size:0.95rem; font-weight:700; color:#12406b; }
+.dist-note { margin:-6px 16px 14px; font-size:0.68rem; color:#7a8899; text-align:right; }
 .future-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:4px 14px 14px; }
 .plan-fut { padding:9px 10px; border-radius:8px; background:#f5f8ff; border-left:4px solid #6688bb; }
 .plan-fut .lbl  { font-size:0.7rem; font-weight:700; color:#336699; text-transform:uppercase; letter-spacing:0.04em; }
@@ -126,7 +134,7 @@ function abbr(v) {
   return v;
 }
 
-function buildCard(key, rows) {
+function buildCard(key, rows, base) {
   const meta     = META[key];
   const rows2426 = rows.filter(r => r.ano <= 2026);
   const futRows  = rows.filter(r => r.ano >= 2027);
@@ -135,6 +143,13 @@ function buildCard(key, rows) {
   const totalExec = rows2426.reduce((s,r) => s + (r.exec || 0), 0);
   const deficit   = totalPlan - totalExec;
   const defPct    = (deficit / totalPlan * 100).toFixed(1);
+  const totalAtual = base && base.atual ? base.atual : rows.reduce((s,r) => s + r.plan, 0);
+  const saldo      = totalAtual - totalExec;
+  const futTotal   = futRows.reduce((s,r) => s + r.plan, 0);
+  const difDist    = saldo - futTotal;
+  const distNote   = Math.abs(difDist) < 1
+    ? 'Saldo integralmente distribuído entre 2027 e 2029'
+    : (difDist > 0 ? `Falta distribuir ${brl(difDist)}` : `Distribuído acima do saldo em ${brl(-difDist)}`);
 
   const card = document.createElement('div');
   card.className = `card ${meta.cls}`;
@@ -150,16 +165,18 @@ function buildCard(key, rows) {
     <div class="card-header">${meta.label}</div>
     <div class="section-label">Planejado vs. Executado — 2024 a 2026</div>
     <div class="chart-wrap"><canvas id="chart-${key}" height="150"></canvas></div>
-    <div class="section-label">Déficit acumulado (2024–2026)</div>
-    <div class="deficit-box">
+    <div class="def-line">Não executado 2024–2026: <b>${brl(deficit)}</b> (${defPct}% do planejado)</div>
+    <div class="section-label">Saldo para os próximos exercícios</div>
+    <div class="saldo-box">
       <div>
-        <div class="lbl">Não executado</div>
-        <div class="pct-wrap">${defPct}% do valor planejado</div>
+        <div class="lbl">Saldo a executar (2027–2029)</div>
+        <div class="sub">Planejado atual ${brl(totalAtual)} − executado ${brl(totalExec)}</div>
       </div>
-      <div class="val">${brl(deficit)}</div>
+      <div class="val">${brl(saldo)}</div>
     </div>
     <div class="section-label">Previsto — exercícios futuros</div>
-    <div class="future-row">${futHTML}</div>`;
+    <div class="future-row">${futHTML}</div>
+    <div class="dist-note">${distNote}</div>`;
 
   document.getElementById('main-grid').appendChild(card);
 
@@ -258,7 +275,7 @@ fetch(API_URL)
 
     if (data.baseline) buildBaseline(data.baseline);
     ['interpi','saf','semarh','seplan'].forEach(k => {
-      if (data[k]) buildCard(k, data[k]);
+      if (data[k]) buildCard(k, data[k], (data.baseline||{})[k]);
     });
   })
   .catch(err => {
