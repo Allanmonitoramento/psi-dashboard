@@ -32,7 +32,7 @@ h1 { text-align:center; font-size:1.25rem; font-weight:700; color:#1a3a5c; margi
   color:#8899aa; padding:10px 16px 4px; border-top:1px solid #eef2f7;
 }
 .section-label:first-of-type { border-top:none; padding-top:14px; }
-.chart-wrap { padding:4px 16px 8px; }
+.chart-wrap { padding:4px 16px 8px; position:relative; height:220px; }
 .deficit-box {
   margin:4px 14px 10px; padding:10px 14px; border-radius:8px;
   background:#fff4f2; border-left:4px solid #cc3300;
@@ -41,8 +41,8 @@ h1 { text-align:center; font-size:1.25rem; font-weight:700; color:#1a3a5c; margi
 .deficit-box .lbl  { font-size:0.75rem; font-weight:700; color:#cc3300; text-transform:uppercase; letter-spacing:0.05em; }
 .deficit-box .val  { font-size:0.95rem; font-weight:700; color:#991100; }
 .deficit-box .pct-wrap { font-size:0.72rem; color:#bb5500; }
-.def-line { margin:0 16px 8px; font-size:0.74rem; color:#7a8899; }
-.def-line b { color:#556677; }
+.def-line { margin:0 16px 10px; font-size:0.74rem; color:#c0392b; }
+.def-line b { color:#a93226; font-weight:600; }
 .saldo-box { margin:4px 14px 10px; padding:10px 14px; border-radius:8px; background:#eef4fb; border-left:4px solid #1a5f9e;
   display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; }
 .saldo-box .lbl { font-size:0.75rem; font-weight:700; color:#1a5f9e; text-transform:uppercase; letter-spacing:0.05em; }
@@ -164,8 +164,8 @@ function buildCard(key, rows, base) {
   card.innerHTML = `
     <div class="card-header">${meta.label}</div>
     <div class="section-label">Planejado vs. Executado — 2024 a 2026</div>
-    <div class="chart-wrap"><canvas id="chart-${key}" height="150"></canvas></div>
-    <div class="def-line">Não executado 2024–2026: <b>${brl(deficit)}</b> (${defPct}% do planejado)</div>
+    <div class="chart-wrap"><canvas id="chart-${key}"></canvas></div>
+    <div class="def-line">Déficit acumulado 2024–2026: <b>${brl(deficit)}</b> (${defPct}% do planejado)</div>
     <div class="section-label">Saldo para os próximos exercícios</div>
     <div class="saldo-box">
       <div>
@@ -202,6 +202,10 @@ function buildCard(key, rows, base) {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      animations: false,
+      transitions: { active: { animation: { duration: 0 } } },
       plugins: {
         legend: { display:false },
         datalabels: {
