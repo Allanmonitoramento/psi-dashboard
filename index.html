@@ -92,14 +92,14 @@ h1 { text-align:center; font-size:1.25rem; font-weight:700; color:#1a3a5c; margi
 
   <!-- BASELINE -->
   <div style="max-width:1120px;margin:0 auto 28px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
-    <div style="padding:11px 20px;background:#1a3a5c;color:#fff;font-weight:700;font-size:0.95rem;letter-spacing:0.05em;">Baseline — Planejado Original vs. Planejado Atual (total do projeto)</div>
+    <div style="padding:11px 20px;background:#1a3a5c;color:#fff;font-weight:700;font-size:0.95rem;letter-spacing:0.05em;">Baseline — Planejado Original (desenho do projeto) vs. Planejado Ajustado (após reajustes)</div>
     <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
         <thead>
           <tr style="background:#f7f9fc;">
             <th style="padding:9px 16px;text-align:left;font-weight:700;color:#445566;border-bottom:2px solid #e0e8f0;">Secretaria</th>
             <th style="padding:9px 16px;text-align:right;font-weight:700;color:#445566;border-bottom:2px solid #e0e8f0;">Planejado Original</th>
-            <th style="padding:9px 16px;text-align:right;font-weight:700;color:#445566;border-bottom:2px solid #e0e8f0;">Planejado Atual</th>
+            <th style="padding:9px 16px;text-align:right;font-weight:700;color:#445566;border-bottom:2px solid #e0e8f0;">Planejado Ajustado</th>
             <th style="padding:9px 16px;text-align:right;font-weight:700;color:#445566;border-bottom:2px solid #e0e8f0;">Diferença</th>
             <th style="padding:9px 16px;text-align:left;font-weight:700;color:#445566;border-bottom:2px solid #e0e8f0;">Situação</th>
           </tr>
@@ -171,7 +171,7 @@ function buildCard(key, rows, base) {
     <div class="def-line">Déficit acumulado 2024–2026: <b>${brl(deficit)}</b> (${defPct}% do planejado)</div>
     <div class="section-label">Saldo para os próximos exercícios</div>
     <div class="saldo-box">
-      <div class="srow"><span>Valor total previsto para a secretaria</span><span>${brl(totalAtual)}</span></div>
+      <div class="srow"><span>Planejado ajustado da secretaria</span><span>${brl(totalAtual)}</span></div>
       <div class="srow"><span>(−) Já executado de 2024 a 2026</span><span>${brl(totalExec)}</span></div>
       <div class="srow total"><span>(=) Saldo a executar de 2027 a 2029</span><span>${brl(saldo)}</span></div>
     </div>
@@ -247,11 +247,11 @@ function buildBaseline(baseline) {
     const meta = META[key];
     const diff = b.atual - b.original;
     const isZero = Math.abs(diff) < 0.01;
-    const diffColor = isZero ? '#6699aa' : (diff > 0 ? '#cc3300' : '#2e7d32');
-    const pct = Math.abs(diff / b.original * 100).toFixed(1);
+    const diffColor = isZero ? '#6699aa' : '#b45309';
+    const pct = (diff / b.original * 100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
     const badge = isZero
       ? `<span style="background:#eef4ee;color:#2e7d32;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:12px;">Sem alteração</span>`
-      : `<span style="background:#fff0ee;color:#cc3300;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:12px;">Revisão +${pct}%</span>`;
+      : `<span style="background:#fff6e8;color:#b45309;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:12px;">Reajustado ${diff>0?'+':''}${pct}%</span>`;
     const tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid #eef2f7';
     tr.innerHTML = `
@@ -271,7 +271,7 @@ fetch(API_URL)
   .then(r => r.json())
   .then(data => {
     const dt = data.atualizado
-      ? `Dados atualizados até <strong>${new Date(data.atualizado).toLocaleDateString('pt-BR')}</strong>`
+      ? `Dados atualizados até <strong>${String(data.atualizado).includes('/') ? data.atualizado : new Date(data.atualizado).toLocaleDateString('pt-BR')}</strong>`
       : 'Projeto PSI BR-L1542';
     document.getElementById('subtitle').innerHTML = `Projeto PSI BR-L1542 &nbsp;|&nbsp; ${dt}`;
 
