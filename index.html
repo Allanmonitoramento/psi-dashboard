@@ -134,7 +134,7 @@ function brl(v) {
 function abbr(v) {
   if (v >= 1e6) return (v/1e6).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'Mi';
   if (v >= 1e3) return (v/1e3).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})+'K';
-  return v;
+  return v ? v.toLocaleString('pt-BR') : 'R$ 0';
 }
 
 function buildCard(key, rows, base) {
