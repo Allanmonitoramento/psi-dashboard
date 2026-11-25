@@ -57,6 +57,15 @@ h1 { text-align:center; font-size:1.25rem; font-weight:700; color:#1a3a5c; margi
 .plan-fut .lbl  { font-size:0.7rem; font-weight:700; color:#336699; text-transform:uppercase; letter-spacing:0.04em; }
 .plan-fut .val  { font-size:0.82rem; font-weight:700; color:#1a3a5c; margin-top:3px; }
 .plan-fut .note { font-size:0.65rem; color:#7799bb; }
+.kpi-row { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; max-width:1100px; margin:0 auto 6px; }
+@media (max-width:760px){ .kpi-row { grid-template-columns:1fr; } }
+.kpi { background:#fff; border-radius:10px; padding:14px 18px; box-shadow:0 1px 4px rgba(0,0,0,0.08); border-top:4px solid #1a3a5c; }
+.kpi.exec { border-top-color:#2e7d32; } .kpi.saldo { border-top-color:#b45309; }
+.kpi .k-lbl { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#6b819a; }
+.kpi .k-brl { font-size:1.35rem; font-weight:700; color:#1a2b3c; margin-top:4px; }
+.kpi .k-usd { font-size:0.9rem; color:#4a6078; margin-top:2px; }
+.kpi .k-pct { font-size:0.7rem; color:#8899aa; margin-top:4px; }
+.kpi-fx { text-align:center; font-size:0.7rem; color:#8899aa; margin:0 auto 20px; }
 .legend { display:flex; justify-content:center; gap:20px; margin:0 auto 22px; flex-wrap:wrap; }
 .legend-item { display:flex; align-items:center; gap:6px; font-size:0.8rem; color:#445566; }
 .legend-dot { width:14px; height:14px; border-radius:3px; }
@@ -85,6 +94,8 @@ h1 { text-align:center; font-size:1.25rem; font-weight:700; color:#1a3a5c; margi
 <div id="error-msg" style="display:none;"></div>
 
 <div id="content" style="display:none;">
+  <div class="kpi-row" id="kpi-row"></div>
+  <div class="kpi-fx" id="kpi-fx"></div>
   <div class="legend">
     <div class="legend-item"><div class="legend-dot dot-plan"></div> Planejado</div>
     <div class="legend-item"><div class="legend-dot dot-exec"></div> Executado</div>
@@ -267,6 +278,43 @@ function buildBaseline(baseline) {
   });
 }
 
+function usd(v) {
+  return v.toLocaleString('pt-BR', { style:'currency', currency:'USD', minimumFractionDigits:2 }).replace('US$','US$ ');
+}
+function buildKPIs(data) {
+  const keys = ['interpi','saf','semarh','seplan'];
+  let disp = 0, gasto = 0;
+  keys.forEach(k => {
+    const b = (data.baseline||{})[k];
+    const rows = data[k] || [];
+    disp  += b && b.atual ? b.atual : rows.reduce((s,r)=>s+r.plan,0);
+    gasto += rows.filter(r=>r.ano<=2026).reduce((s,r)=>s+(r.exec||0),0);
+  });
+  const saldo = disp - gasto;
+  const pctG = (gasto/disp*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+  const pctS = (saldo/disp*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+  const render = (rate, fxTxt) => {
+    const u = v => rate ? usd(v/rate) : 'US$ —';
+    document.getElementById('kpi-row').innerHTML = `
+      <div class="kpi"><div class="k-lbl">Valor total do projeto (planejado ajustado)</div>
+        <div class="k-brl">${brl(disp)}</div><div class="k-usd">${u(disp)}</div><div class="k-pct">Soma das 4 secretarias</div></div>
+      <div class="kpi exec"><div class="k-lbl">Total executado (2024–2026)</div>
+        <div class="k-brl">${brl(gasto)}</div><div class="k-usd">${u(gasto)}</div><div class="k-pct">${pctG}% do valor total</div></div>
+      <div class="kpi saldo"><div class="k-lbl">Saldo disponível (2027–2029)</div>
+        <div class="k-brl">${brl(saldo)}</div><div class="k-usd">${u(saldo)}</div><div class="k-pct">${pctS}% do valor total</div></div>`;
+    document.getElementById('kpi-fx').innerHTML = fxTxt;
+  };
+  render(null, 'Buscando cotação do dólar…');
+  fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL')
+    .then(r => r.json())
+    .then(j => {
+      const q = j.USDBRL, rate = parseFloat(q.bid);
+      const d = new Date(q.create_date.replace(' ','T')).toLocaleDateString('pt-BR');
+      render(rate, `Conversão em US$ pela cotação comercial de ${d}: US$ 1,00 = ${brl(rate)}`);
+    })
+    .catch(() => render(null, 'Cotação do dólar indisponível no momento.'));
+}
+
 fetch(API_URL)
   .then(r => r.json())
   .then(data => {
@@ -279,6 +327,7 @@ fetch(API_URL)
     document.getElementById('content').style.display = 'block';
 
     if (data.baseline) buildBaseline(data.baseline);
+    buildKPIs(data);
     ['interpi','saf','semarh','seplan'].forEach(k => {
       if (data[k]) buildCard(k, data[k], (data.baseline||{})[k]);
     });
