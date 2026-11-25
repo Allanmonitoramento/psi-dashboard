@@ -283,36 +283,25 @@ function usd(v) {
 }
 const PROJETO_USD = 147500000; // valor do contrato BR-L1542 em US$
 
+const COTACAO_PADRAO = 5.50; // usada se a planilha não informar a cotação
+
 function buildKPIs(data) {
+  const rate = Number(data.cotacao) > 0 ? Number(data.cotacao) : COTACAO_PADRAO;
   let gasto = 0;
   ['interpi','saf','semarh','seplan'].forEach(k => {
     gasto += (data[k]||[]).filter(r=>r.ano<=2026).reduce((s,r)=>s+(r.exec||0),0);
   });
+  const gastoUSD = gasto / rate;
+  const saldoUSD = PROJETO_USD - gastoUSD;
   const pct = v => v.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
-  const render = (rate, fxTxt) => {
-    const gastoUSD = rate ? gasto / rate : null;
-    const saldoUSD = rate ? PROJETO_USD - gastoUSD : null;
-    const r = v => rate ? brl(v * rate) : 'R$ —';
-    document.getElementById('kpi-row').innerHTML = `
-      <div class="kpi"><div class="k-lbl">Valor total do projeto</div>
-        <div class="k-brl">${usd(PROJETO_USD)}</div><div class="k-usd">${r(PROJETO_USD)}</div><div class="k-pct">Valor contratado em dólar</div></div>
-      <div class="kpi exec"><div class="k-lbl">Total executado (2024–2026)</div>
-        <div class="k-brl">${rate ? usd(gastoUSD) : 'US$ —'}</div><div class="k-usd">${brl(gasto)}</div>
-        <div class="k-pct">${rate ? pct(gastoUSD/PROJETO_USD*100)+'% do valor total' : ''}</div></div>
-      <div class="kpi saldo"><div class="k-lbl">Saldo disponível</div>
-        <div class="k-brl">${rate ? usd(saldoUSD) : 'US$ —'}</div><div class="k-usd">${rate ? brl(saldoUSD*rate) : 'R$ —'}</div>
-        <div class="k-pct">${rate ? pct(saldoUSD/PROJETO_USD*100)+'% do valor total' : ''}</div></div>`;
-    document.getElementById('kpi-fx').innerHTML = fxTxt;
-  };
-  render(null, 'Buscando cotação do dólar…');
-  fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL')
-    .then(r => r.json())
-    .then(j => {
-      const q = j.USDBRL, rate = parseFloat(q.bid);
-      const d = new Date(q.create_date.replace(' ','T')).toLocaleDateString('pt-BR');
-      render(rate, `Valores convertidos pela cotação comercial de ${d}: US$ 1,00 = ${brl(rate)}`);
-    })
-    .catch(() => render(null, 'Cotação do dólar indisponível no momento.'));
+  document.getElementById('kpi-row').innerHTML = `
+    <div class="kpi"><div class="k-lbl">Valor contratado</div>
+      <div class="k-brl">${usd(PROJETO_USD)}</div><div class="k-usd">${brl(PROJETO_USD*rate)}</div><div class="k-pct">Valor do contrato BR-L1542</div></div>
+    <div class="kpi exec"><div class="k-lbl">Total executado (2024–2026)</div>
+      <div class="k-brl">${brl(gasto)}</div><div class="k-usd">${usd(gastoUSD)}</div><div class="k-pct">${pct(gastoUSD/PROJETO_USD*100)}% do valor contratado</div></div>
+    <div class="kpi saldo"><div class="k-lbl">Saldo disponível</div>
+      <div class="k-brl">${usd(saldoUSD)}</div><div class="k-usd">${brl(saldoUSD*rate)}</div><div class="k-pct">${pct(saldoUSD/PROJETO_USD*100)}% do valor contratado</div></div>`;
+  document.getElementById('kpi-fx').innerHTML = `Cotação fixa adotada no painel: US$ 1,00 = ${brl(rate)}`;
 }
 
 fetch(API_URL)
