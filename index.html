@@ -281,27 +281,27 @@ function buildBaseline(baseline) {
 function usd(v) {
   return v.toLocaleString('pt-BR', { style:'currency', currency:'USD', minimumFractionDigits:2 }).replace('US$','US$ ');
 }
+const PROJETO_USD = 147500000; // valor do contrato BR-L1542 em US$
+
 function buildKPIs(data) {
-  const keys = ['interpi','saf','semarh','seplan'];
-  let disp = 0, gasto = 0;
-  keys.forEach(k => {
-    const b = (data.baseline||{})[k];
-    const rows = data[k] || [];
-    disp  += b && b.atual ? b.atual : rows.reduce((s,r)=>s+r.plan,0);
-    gasto += rows.filter(r=>r.ano<=2026).reduce((s,r)=>s+(r.exec||0),0);
+  let gasto = 0;
+  ['interpi','saf','semarh','seplan'].forEach(k => {
+    gasto += (data[k]||[]).filter(r=>r.ano<=2026).reduce((s,r)=>s+(r.exec||0),0);
   });
-  const saldo = disp - gasto;
-  const pctG = (gasto/disp*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
-  const pctS = (saldo/disp*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+  const pct = v => v.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
   const render = (rate, fxTxt) => {
-    const u = v => rate ? usd(v/rate) : 'US$ —';
+    const gastoUSD = rate ? gasto / rate : null;
+    const saldoUSD = rate ? PROJETO_USD - gastoUSD : null;
+    const r = v => rate ? brl(v * rate) : 'R$ —';
     document.getElementById('kpi-row').innerHTML = `
-      <div class="kpi"><div class="k-lbl">Valor total do projeto (planejado ajustado)</div>
-        <div class="k-brl">${brl(disp)}</div><div class="k-usd">${u(disp)}</div><div class="k-pct">Soma das 4 secretarias</div></div>
+      <div class="kpi"><div class="k-lbl">Valor total do projeto</div>
+        <div class="k-brl">${usd(PROJETO_USD)}</div><div class="k-usd">${r(PROJETO_USD)}</div><div class="k-pct">Valor contratado em dólar</div></div>
       <div class="kpi exec"><div class="k-lbl">Total executado (2024–2026)</div>
-        <div class="k-brl">${brl(gasto)}</div><div class="k-usd">${u(gasto)}</div><div class="k-pct">${pctG}% do valor total</div></div>
-      <div class="kpi saldo"><div class="k-lbl">Saldo disponível (2027–2029)</div>
-        <div class="k-brl">${brl(saldo)}</div><div class="k-usd">${u(saldo)}</div><div class="k-pct">${pctS}% do valor total</div></div>`;
+        <div class="k-brl">${rate ? usd(gastoUSD) : 'US$ —'}</div><div class="k-usd">${brl(gasto)}</div>
+        <div class="k-pct">${rate ? pct(gastoUSD/PROJETO_USD*100)+'% do valor total' : ''}</div></div>
+      <div class="kpi saldo"><div class="k-lbl">Saldo disponível</div>
+        <div class="k-brl">${rate ? usd(saldoUSD) : 'US$ —'}</div><div class="k-usd">${rate ? brl(saldoUSD*rate) : 'R$ —'}</div>
+        <div class="k-pct">${rate ? pct(saldoUSD/PROJETO_USD*100)+'% do valor total' : ''}</div></div>`;
     document.getElementById('kpi-fx').innerHTML = fxTxt;
   };
   render(null, 'Buscando cotação do dólar…');
@@ -310,7 +310,7 @@ function buildKPIs(data) {
     .then(j => {
       const q = j.USDBRL, rate = parseFloat(q.bid);
       const d = new Date(q.create_date.replace(' ','T')).toLocaleDateString('pt-BR');
-      render(rate, `Conversão em US$ pela cotação comercial de ${d}: US$ 1,00 = ${brl(rate)}`);
+      render(rate, `Valores convertidos pela cotação comercial de ${d}: US$ 1,00 = ${brl(rate)}`);
     })
     .catch(() => render(null, 'Cotação do dólar indisponível no momento.'));
 }
